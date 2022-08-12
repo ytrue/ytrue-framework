@@ -2,12 +2,11 @@ package com.ytrue.orm.test.dao;
 
 /**
  * @author ytrue
- * @date 2022/7/11 11:09
+ * @date 2022/8/11 15:09
  * @description IUserDao
  */
 public interface IUserDao {
 
-    String queryUserName(String uId);
+    String queryUserInfoById(String uId);
 
-    Integer queryUserAge(String uId);
 }

@@ -2,7 +2,7 @@ package com.ytrue.orm.session;
 
 /**
  * @author ytrue
- * @date 2022/7/11 11:18
+ * @date 2022/8/11 15:21
  * @description SqlSession
  */
 public interface SqlSession {
@@ -38,4 +38,11 @@ public interface SqlSession {
      * @return a mapper bound to this SqlSession
      */
     <T> T getMapper(Class<T> type);
+
+    /**
+     * Retrieves current configuration
+     * 得到配置
+     * @return Configuration
+     */
+    Configuration getConfiguration();
 }

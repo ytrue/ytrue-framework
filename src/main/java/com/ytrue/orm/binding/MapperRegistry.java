@@ -1,6 +1,7 @@
 package com.ytrue.orm.binding;
 
 import cn.hutool.core.lang.ClassScanner;
+import com.ytrue.orm.session.Configuration;
 import com.ytrue.orm.session.SqlSession;
 
 import java.util.HashMap;
@@ -9,35 +10,48 @@ import java.util.Set;
 
 /**
  * @author ytrue
- * @date 2022/7/11 11:17
- * @description MapperRegistry
+ * @date 2022/8/11 15:27
+ * @description 映射器注册机
  */
 public class MapperRegistry {
+
+    private Configuration config;
+
     /**
      * 将已添加的映射器代理加入到 HashMap
      */
     private final Map<Class<?>, MapperProxyFactory<?>> knownMappers = new HashMap<>();
 
+    public MapperRegistry(Configuration config) {
+        this.config = config;
+    }
 
+    /**
+     * 获取代理对象
+     *
+     * @param type
+     * @param sqlSession
+     * @param <T>
+     * @return
+     */
     public <T> T getMapper(Class<T> type, SqlSession sqlSession) {
-        // 获取
+
         final MapperProxyFactory<T> mapperProxyFactory = (MapperProxyFactory<T>) knownMappers.get(type);
 
-        // 没有的话抛出异常
         if (mapperProxyFactory == null) {
             throw new RuntimeException("Type " + type + " is not known to the MapperRegistry.");
-        }
-
-        try {
-            return mapperProxyFactory.newInstance(sqlSession);
-        } catch (Exception e) {
-            throw new RuntimeException("Error getting mapper instance. Cause: " + e, e);
+        } else {
+            try {
+                // 生成代理对象
+                return mapperProxyFactory.newInstance(sqlSession);
+            } catch (Exception e) {
+                throw new RuntimeException("Error getting mapper instance. Cause: " + e, e);
+            }
         }
     }
 
-
     /**
-     * 添加
+     * 注册
      *
      * @param type
      * @param <T>
@@ -54,32 +68,27 @@ public class MapperRegistry {
         }
     }
 
-
     /**
-     * 是否存在
+     * 判断是否存在
      *
      * @param type
      * @param <T>
      * @return
      */
     public <T> boolean hasMapper(Class<T> type) {
-        MapperProxyFactory<?> mapperProxyFactory = knownMappers.get(type);
-        return null != mapperProxyFactory;
+        return knownMappers.containsKey(type);
     }
 
+
     /**
-     * 批量添加
+     * 传入包的路径扫码这个包下的 所有类，在把类加入map里面去
      *
      * @param packageName
      */
     public void addMappers(String packageName) {
         Set<Class<?>> mapperSet = ClassScanner.scanPackage(packageName);
-
-        System.out.println(mapperSet);
-
         for (Class<?> mapperClass : mapperSet) {
             addMapper(mapperClass);
         }
     }
-
 }
