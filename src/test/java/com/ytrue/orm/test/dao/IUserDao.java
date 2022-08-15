@@ -1,5 +1,7 @@
 package com.ytrue.orm.test.dao;
 
+import com.ytrue.orm.test.po.User;
+
 /**
  * @author ytrue
  * @date 2022/8/11 15:09
@@ -7,6 +9,6 @@ package com.ytrue.orm.test.dao;
  */
 public interface IUserDao {
 
-    String queryUserInfoById(String uId);
+    User queryUserInfoById(Long uId);
 
 }

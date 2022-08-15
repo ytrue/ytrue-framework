@@ -35,22 +35,7 @@ public class MappedStatement {
     private SqlCommandType sqlCommandType;
 
     /**
-     * 参数类型
+     * 绑定Sql
      */
-    private String parameterType;
-
-    /**
-     * 返回类型
-     */
-    private String resultType;
-
-    /**
-     * sql语句
-     */
-    private String sql;
-
-    /**
-     * Dao方法的参数
-     */
-    private Map<Integer, String> parameter;
+    private BoundSql boundSql;
 }

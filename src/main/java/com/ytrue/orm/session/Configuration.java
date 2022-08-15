@@ -1,7 +1,13 @@
 package com.ytrue.orm.session;
 
 import com.ytrue.orm.binding.MapperRegistry;
+import com.ytrue.orm.datasource.druid.DruidDataSourceFactory;
+import com.ytrue.orm.mapping.Environment;
 import com.ytrue.orm.mapping.MappedStatement;
+import com.ytrue.orm.transaction.jdbc.JdbcTransactionFactory;
+import com.ytrue.orm.transaction.type.TypeAliasRegistry;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,6 +20,13 @@ import java.util.Map;
 public class Configuration {
 
     /**
+     * 环境
+     */
+    @Getter
+    @Setter
+    protected Environment environment;
+
+    /**
      * 实例化注册器
      */
     protected MapperRegistry mapperRegistry = new MapperRegistry(this);
@@ -23,6 +36,19 @@ public class Configuration {
      */
     protected final Map<String, MappedStatement> mappedStatements = new HashMap<>();
 
+
+    /**
+     * 类型别名注册机
+     */
+    @Getter
+    protected final TypeAliasRegistry typeAliasRegistry = new TypeAliasRegistry();
+
+    public Configuration() {
+        // 注册jdbc事务管理器
+        typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
+        // 注册druid的数据源工厂
+        typeAliasRegistry.registerAlias("DRUID", DruidDataSourceFactory.class);
+    }
 
     /**
      * 扫描批量加入

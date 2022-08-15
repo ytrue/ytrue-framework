@@ -2,10 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ytrue.orm.test.dao.IUserDao">
 
-    <select id="queryUserInfoById" parameterType="java.lang.Long" resultType="com.ytrue.orm.test.po.User">
-        SELECT id, userId, userHead, createTime
+     <select id="queryUserInfoById" parameterType="java.lang.Long" resultType="com.ytrue.orm.test.po.User">
+        SELECT id, userId, userName, userHead
         FROM user
-        where id = #{id} and name = #{name}
+        where id = #{id}
     </select>
 
 </mapper>

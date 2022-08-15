@@ -6,7 +6,9 @@ import com.ytrue.orm.session.Configuration;
 import com.ytrue.orm.session.SqlSession;
 import com.ytrue.orm.session.SqlSessionFactory;
 import com.ytrue.orm.session.SqlSessionFactoryBuilder;
+import com.ytrue.orm.session.defaults.DefaultSqlSession;
 import com.ytrue.orm.test.dao.IUserDao;
+import com.ytrue.orm.test.po.User;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 
@@ -34,7 +36,26 @@ public class ApiTest {
         IUserDao userDao = sqlSession.getMapper(IUserDao.class);
 
         // 3. 测试验证
-        String res = userDao.queryUserInfoById("10001");
-        log.info("测试结果：{}", res);
+        // 3. 测试验证
+        User user = userDao.queryUserInfoById(1L);
+
+        System.out.println(user);
+    }
+
+    @Test
+    public void test_selectOne() throws IOException {
+        // 解析 XML
+        Reader reader = Resources.getResourceAsReader("ytrue-orm-config.xml");
+        XMLConfigBuilder xmlConfigBuilder = new XMLConfigBuilder(reader);
+        Configuration configuration = xmlConfigBuilder.parse();
+
+        // 获取 DefaultSqlSession
+        SqlSession sqlSession = new DefaultSqlSession(configuration);
+
+        // 执行查询：默认是一个集合参数
+        Object[] req = {1L};
+        Object res = sqlSession.selectOne("com.ytrue.orm.test.dao.IUserDao.queryUserInfoById", req);
+
+        System.out.println(res);
     }
 }
