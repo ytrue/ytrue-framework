@@ -44,6 +44,9 @@ public class DefaultSqlSession implements SqlSession {
             ResultSet resultSet = preparedStatement.executeQuery();
 
             List<T> objList = resultSet2Obj(resultSet, Class.forName(boundSql.getResultType()));
+
+            // 要关闭连接，如果连接池不关闭连接会一直暂用,测试连接池注释
+            //connection.close();
             return objList.get(0);
 
         } catch (Exception e) {

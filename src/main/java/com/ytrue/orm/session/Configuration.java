@@ -2,6 +2,8 @@ package com.ytrue.orm.session;
 
 import com.ytrue.orm.binding.MapperRegistry;
 import com.ytrue.orm.datasource.druid.DruidDataSourceFactory;
+import com.ytrue.orm.datasource.pooled.PooledDataSourceFactory;
+import com.ytrue.orm.datasource.unpooled.UnpooledDataSourceFactory;
 import com.ytrue.orm.mapping.Environment;
 import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.transaction.jdbc.JdbcTransactionFactory;
@@ -48,6 +50,9 @@ public class Configuration {
         typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
         // 注册druid的数据源工厂
         typeAliasRegistry.registerAlias("DRUID", DruidDataSourceFactory.class);
+
+        typeAliasRegistry.registerAlias("UNPOOLED", UnpooledDataSourceFactory.class);
+        typeAliasRegistry.registerAlias("POOLED", PooledDataSourceFactory.class);
     }
 
     /**

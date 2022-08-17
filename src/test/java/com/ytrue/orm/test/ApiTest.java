@@ -35,27 +35,28 @@ public class ApiTest {
         // 2. 生成代理对象
         IUserDao userDao = sqlSession.getMapper(IUserDao.class);
 
-        // 3. 测试验证
-        // 3. 测试验证
-        User user = userDao.queryUserInfoById(1L);
 
-        System.out.println(user);
+        // 3. 测试验证
+        for (int i = 0; i < 50; i++) {
+            User user = userDao.queryUserInfoById(1L);
+            log.info("测试结果：{}", user.toString());
+        }
     }
 
-    @Test
-    public void test_selectOne() throws IOException {
-        // 解析 XML
-        Reader reader = Resources.getResourceAsReader("ytrue-orm-config.xml");
-        XMLConfigBuilder xmlConfigBuilder = new XMLConfigBuilder(reader);
-        Configuration configuration = xmlConfigBuilder.parse();
-
-        // 获取 DefaultSqlSession
-        SqlSession sqlSession = new DefaultSqlSession(configuration);
-
-        // 执行查询：默认是一个集合参数
-        Object[] req = {1L};
-        Object res = sqlSession.selectOne("com.ytrue.orm.test.dao.IUserDao.queryUserInfoById", req);
-
-        System.out.println(res);
-    }
+//    @Test
+//    public void test_selectOne() throws IOException {
+//        // 解析 XML
+//        Reader reader = Resources.getResourceAsReader("ytrue-orm-config.xml");
+//        XMLConfigBuilder xmlConfigBuilder = new XMLConfigBuilder(reader);
+//        Configuration configuration = xmlConfigBuilder.parse();
+//
+//        // 获取 DefaultSqlSession
+//        SqlSession sqlSession = new DefaultSqlSession(configuration);
+//
+//        // 执行查询：默认是一个集合参数
+//        Object[] req = {1L};
+//        Object res = sqlSession.selectOne("com.ytrue.orm.test.dao.IUserDao.queryUserInfoById", req);
+//
+//        System.out.println(res);
+//    }
 }
