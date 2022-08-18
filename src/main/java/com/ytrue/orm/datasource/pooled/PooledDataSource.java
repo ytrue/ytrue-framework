@@ -107,7 +107,7 @@ public class PooledDataSource implements DataSource {
 
                     // 代理连接设置无效
                     connection.invalidate();
-                    log.info("Returned connection " + newConnection.getRealHashCode() + " to pool.");
+                    log.debug("Returned connection " + newConnection.getRealHashCode() + " to pool.");
                     // 通知其他线程可以来抢DB连接了
                     state.notifyAll();
                 } else {
@@ -119,12 +119,12 @@ public class PooledDataSource implements DataSource {
                     }
                     // 将connection关闭
                     connection.getRealConnection().close();
-                    log.info("Closed connection " + connection.getRealHashCode() + ".");
+                    log.debug("Closed connection " + connection.getRealHashCode() + ".");
                     // 设置无效
                     connection.invalidate();
                 }
             } else {
-                log.info("A bad connection (" + connection.getRealHashCode() + ") attempted to return to the pool, discarding connection.");
+                log.debug("A bad connection (" + connection.getRealHashCode() + ") attempted to return to the pool, discarding connection.");
                 state.badConnectionCount++;
             }
         }
@@ -151,14 +151,14 @@ public class PooledDataSource implements DataSource {
                 // 如果有空闲链接：返回第一个
                 if (!state.idleConnections.isEmpty()) {
                     conn = state.idleConnections.remove(0);
-                    log.info("Checked out connection " + conn.getRealHashCode() + " from pool.");
+                    log.debug("Checked out connection " + conn.getRealHashCode() + " from pool.");
                 } else {
                     // 如果无空闲链接：创建新的链接
 
                     // 活跃连接数不足
                     if (state.activeConnections.size() < poolMaximumActiveConnections) {
                         conn = new PooledConnection(dataSource.getConnection(), this);
-                        log.info("Created connection " + conn.getRealHashCode() + ".");
+                        log.debug("Created connection " + conn.getRealHashCode() + ".");
                     }
                     // 活跃连接数已满
                     else {
@@ -180,7 +180,7 @@ public class PooledDataSource implements DataSource {
                             conn = new PooledConnection(oldestActiveConnection.getRealConnection(), this);
                             // 设置旧的来连接为无效
                             oldestActiveConnection.invalidate();
-                            log.info("Claimed overdue connection " + conn.getRealHashCode() + ".");
+                            log.debug("Claimed overdue connection " + conn.getRealHashCode() + ".");
                         } else {
                             // 如果checkout超时时间不够长，则等待
                             try {
@@ -188,7 +188,7 @@ public class PooledDataSource implements DataSource {
                                     state.hadToWaitCount++;
                                     countedWait = true;
                                 }
-                                log.info("Waiting as long as " + poolTimeToWait + " milliseconds for connection.");
+                                log.debug("Waiting as long as " + poolTimeToWait + " milliseconds for connection.");
                                 long wt = System.currentTimeMillis();
                                 state.wait(poolTimeToWait);
                                 state.accumulatedWaitTime += System.currentTimeMillis() - wt;
@@ -215,7 +215,7 @@ public class PooledDataSource implements DataSource {
                         state.requestCount++;
                         state.accumulatedRequestTime += System.currentTimeMillis() - t;
                     } else {
-                        log.info("A bad connection (" + conn.getRealHashCode() + ") was returned from the pool, getting another connection.");
+                        log.debug("A bad connection (" + conn.getRealHashCode() + ") was returned from the pool, getting another connection.");
                         // 如果没拿到，统计信息：失败链接 +1
                         state.badConnectionCount++;
                         localBadConnectionCount++;
@@ -274,7 +274,7 @@ public class PooledDataSource implements DataSource {
                 }
             }
 
-            log.info("PooledDataSource forcefully closed/removed all connections.");
+            log.debug("PooledDataSource forcefully closed/removed all connections.");
         }
     }
 
@@ -291,7 +291,7 @@ public class PooledDataSource implements DataSource {
             // 判断是否关闭了
             result = !conn.getRealConnection().isClosed();
         } catch (SQLException e) {
-            log.info("Connection " + conn.getRealHashCode() + " is BAD: " + e.getMessage());
+            log.debug("Connection " + conn.getRealHashCode() + " is BAD: " + e.getMessage());
             result = false;
         }
 
@@ -304,7 +304,7 @@ public class PooledDataSource implements DataSource {
                                 conn.getTimeElapsedSinceLastUse() > poolPingConnectionsNotUsedFor
                 ) {
                     try {
-                        log.info("Testing connection " + conn.getRealHashCode() + " ...");
+                        log.debug("Testing connection " + conn.getRealHashCode() + " ...");
                         Connection realConn = conn.getRealConnection();
                         Statement statement = realConn.createStatement();
                         ResultSet resultSet = statement.executeQuery(poolPingQuery);
@@ -313,15 +313,15 @@ public class PooledDataSource implements DataSource {
                             realConn.rollback();
                         }
                         result = true;
-                        log.info("Connection " + conn.getRealHashCode() + " is GOOD!");
+                        log.debug("Connection " + conn.getRealHashCode() + " is GOOD!");
                     } catch (Exception e) {
-                        log.info("Execution of ping query '" + poolPingQuery + "' failed: " + e.getMessage());
+                        log.debug("Execution of ping query '" + poolPingQuery + "' failed: " + e.getMessage());
                         try {
                             conn.getRealConnection().close();
                         } catch (SQLException ignore) {
                         }
                         result = false;
-                        log.info("Connection " + conn.getRealHashCode() + " is BAD: " + e.getMessage());
+                        log.debug("Connection " + conn.getRealHashCode() + " is BAD: " + e.getMessage());
                     }
                 }
             }

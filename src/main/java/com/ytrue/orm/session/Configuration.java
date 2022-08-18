@@ -4,12 +4,21 @@ import com.ytrue.orm.binding.MapperRegistry;
 import com.ytrue.orm.datasource.druid.DruidDataSourceFactory;
 import com.ytrue.orm.datasource.pooled.PooledDataSourceFactory;
 import com.ytrue.orm.datasource.unpooled.UnpooledDataSourceFactory;
+import com.ytrue.orm.executor.Executor;
+import com.ytrue.orm.executor.SimpleExecutor;
+import com.ytrue.orm.executor.resultset.DefaultResultSetHandler;
+import com.ytrue.orm.executor.resultset.ResultSetHandler;
+import com.ytrue.orm.executor.statement.PreparedStatementHandler;
+import com.ytrue.orm.executor.statement.StatementHandler;
+import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.Environment;
 import com.ytrue.orm.mapping.MappedStatement;
+import com.ytrue.orm.transaction.Transaction;
 import com.ytrue.orm.transaction.jdbc.JdbcTransactionFactory;
 import com.ytrue.orm.transaction.type.TypeAliasRegistry;
 import lombok.Getter;
 import lombok.Setter;
+import sun.plugin2.main.server.ResultHandler;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -114,4 +123,27 @@ public class Configuration {
     public MappedStatement getMappedStatement(String id) {
         return mappedStatements.get(id);
     }
+
+
+    /**
+     * 创建结果集处理器
+     */
+    public ResultSetHandler newResultSetHandler(Executor executor, MappedStatement mappedStatement, BoundSql boundSql) {
+        return new DefaultResultSetHandler(executor, mappedStatement, boundSql);
+    }
+
+    /**
+     * 生产执行器
+     */
+    public Executor newExecutor(Transaction transaction) {
+        return new SimpleExecutor(this, transaction);
+    }
+
+    /**
+     * 创建语句处理器
+     */
+    public StatementHandler newStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameter, ResultHandler resultHandler, BoundSql boundSql) {
+        return new PreparedStatementHandler(executor, mappedStatement, parameter, resultHandler, boundSql);
+    }
+
 }

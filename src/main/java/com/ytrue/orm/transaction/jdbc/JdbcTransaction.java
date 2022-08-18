@@ -66,7 +66,7 @@ public class JdbcTransaction implements Transaction {
     @Override
     public Connection getConnection() throws SQLException {
         // 获取连接
-        Connection connection = dataSource.getConnection();
+        connection = dataSource.getConnection();
         // 设置事务级别
         connection.setTransactionIsolation(level.getLevel());
         // 设置事务是否自动提交
