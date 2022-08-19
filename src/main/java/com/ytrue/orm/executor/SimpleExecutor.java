@@ -42,8 +42,6 @@ public class SimpleExecutor extends BaseExecutor {
             Statement stmt = handler.prepare(connection);
             handler.parameterize(stmt);
             Object query = handler.query(stmt, resultHandler);
-
-            transaction.close();
             return (List<E>) query;
         } catch (SQLException e) {
             e.printStackTrace();
