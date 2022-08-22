@@ -9,9 +9,9 @@ import java.util.Locale;
  */
 public class PropertyNamer {
 
-    private static final String IS = "is";
-    private static final String GET = "get";
-    private static final String SET = "set";
+    public static final String IS = "is";
+    public static final String GET = "get";
+    public static final String SET = "set";
 
     /**
      * 方法名称转换为属性名称

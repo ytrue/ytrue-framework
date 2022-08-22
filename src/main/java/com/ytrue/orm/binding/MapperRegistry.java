@@ -1,12 +1,10 @@
 package com.ytrue.orm.binding;
 
-import cn.hutool.core.lang.ClassScanner;
 import com.ytrue.orm.session.Configuration;
 import com.ytrue.orm.session.SqlSession;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * @author ytrue
@@ -85,10 +83,21 @@ public class MapperRegistry {
      *
      * @param packageName
      */
-    public void addMappers(String packageName) {
-        Set<Class<?>> mapperSet = ClassScanner.scanPackage(packageName);
-        for (Class<?> mapperClass : mapperSet) {
-            addMapper(mapperClass);
-        }
+    public void addMappers(String packageName, Class<?> superType) {
+        // 这个要参考mybatis 的ResolverUtil，或者自己做一个
+//        ResolverUtil<Class<?>> resolverUtil = new ResolverUtil<>();
+//        resolverUtil.find(new ResolverUtil.IsA(superType), packageName);
+//        Set<Class<? extends Class<?>>> mapperSet = resolverUtil.getClasses();
+//        for (Class<?> mapperClass : mapperSet) {
+//            addMapper(mapperClass);
+//        }
     }
+
+    /**
+     * @since 3.2.2
+     */
+    public void addMappers(String packageName) {
+        addMappers(packageName, Object.class);
+    }
+
 }

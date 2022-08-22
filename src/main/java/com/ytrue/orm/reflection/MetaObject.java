@@ -2,10 +2,7 @@ package com.ytrue.orm.reflection;
 
 import com.ytrue.orm.reflection.factory.ObjectFactory;
 import com.ytrue.orm.reflection.property.PropertyTokenizer;
-import com.ytrue.orm.reflection.wrapper.CollectionWrapper;
-import com.ytrue.orm.reflection.wrapper.MapWrapper;
-import com.ytrue.orm.reflection.wrapper.ObjectWrapper;
-import com.ytrue.orm.reflection.wrapper.ObjectWrapperFactory;
+import com.ytrue.orm.reflection.wrapper.*;
 import lombok.Getter;
 
 import java.util.Collection;
@@ -60,7 +57,7 @@ public class MetaObject {
             this.objectWrapper = new CollectionWrapper(this, (Collection) object);
         } else {
             // 除此以外，返回BeanWrapper
-            // this.objectWrapper = new BeanWrapper(this, object);
+            this.objectWrapper = new BeanWrapper(this, object);
         }
     }
 
