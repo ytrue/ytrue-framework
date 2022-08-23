@@ -39,8 +39,8 @@ public class SqlSourceBuilder extends BaseBuilder {
 
         // 把sql语句里面的 #{id} 里面的 id 替换成 ?
         GenericTokenParser parser = new GenericTokenParser("#{", "}", handler);
-
         String sql = parser.parse(originalSql);
+
         // 返回静态 SQL
         return new StaticSqlSource(configuration, sql, handler.getParameterMappings());
     }
@@ -82,6 +82,7 @@ public class SqlSourceBuilder extends BaseBuilder {
          */
         private ParameterMapping buildParameterMapping(String content) {
             // 先解析参数映射,就是转化成一个 HashMap | #{favouriteSection,jdbcType=VARCHAR}
+            // key == property ,value == id
             Map<String, String> propertiesMap = new ParameterExpression(content);
             String property = propertiesMap.get("property");
             Class<?> propertyType = parameterType;

@@ -18,12 +18,14 @@ import com.ytrue.orm.reflection.factory.DefaultObjectFactory;
 import com.ytrue.orm.reflection.factory.ObjectFactory;
 import com.ytrue.orm.reflection.wrapper.DefaultObjectWrapperFactory;
 import com.ytrue.orm.reflection.wrapper.ObjectWrapperFactory;
+import com.ytrue.orm.scripting.LanguageDriverRegistry;
+import com.ytrue.orm.scripting.xmltags.XMLLanguageDriver;
 import com.ytrue.orm.transaction.Transaction;
 import com.ytrue.orm.transaction.jdbc.JdbcTransactionFactory;
 import com.ytrue.orm.type.TypeAliasRegistry;
+import com.ytrue.orm.type.TypeHandlerRegistry;
 import lombok.Getter;
 import lombok.Setter;
-import com.ytrue.orm.session.ResultHandler;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -74,6 +76,20 @@ public class Configuration {
     protected ObjectFactory objectFactory = new DefaultObjectFactory();
     protected ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
 
+
+    /**
+     * 脚本语言注册器
+     */
+    @Getter
+    protected final LanguageDriverRegistry languageRegistry = new LanguageDriverRegistry();
+
+    /**
+     * 类型处理器注册机
+     */
+    @Getter
+    protected final TypeHandlerRegistry typeHandlerRegistry = new TypeHandlerRegistry();
+
+    @Getter
     protected String databaseId;
 
     public Configuration() {
@@ -81,9 +97,10 @@ public class Configuration {
         typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
         // 注册druid的数据源工厂
         typeAliasRegistry.registerAlias("DRUID", DruidDataSourceFactory.class);
-
         typeAliasRegistry.registerAlias("UNPOOLED", UnpooledDataSourceFactory.class);
         typeAliasRegistry.registerAlias("POOLED", PooledDataSourceFactory.class);
+
+        languageRegistry.setDefaultDriverClass(XMLLanguageDriver.class);
     }
 
     /**
@@ -199,7 +216,4 @@ public class Configuration {
         return MetaObject.forObject(object, objectFactory, objectWrapperFactory);
     }
 
-    public String getDatabaseId() {
-        return databaseId;
-    }
 }

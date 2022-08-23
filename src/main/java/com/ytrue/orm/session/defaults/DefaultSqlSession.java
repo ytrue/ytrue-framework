@@ -32,7 +32,7 @@ public class DefaultSqlSession implements SqlSession {
         try {
             MappedStatement ms = configuration.getMappedStatement(statement);
             // 交给 executor 处理
-            List<T> list = executor.query(ms, parameter, Executor.NO_RESULT_HANDLER, ms.getBoundSql());
+            List<T> list = executor.query(ms, parameter, Executor.NO_RESULT_HANDLER, ms.getSqlSource().getBoundSql(parameter));
             return list.get(0);
 
         } catch (Exception e) {

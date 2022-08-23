@@ -1,6 +1,7 @@
 package com.ytrue.orm.builder.xml;
 
 import com.ytrue.orm.builder.BaseBuilder;
+import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.mapping.SqlCommandType;
 import com.ytrue.orm.mapping.SqlSource;
 import com.ytrue.orm.scripting.LanguageDriver;
@@ -71,16 +72,19 @@ public class XMLStatementBuilder extends BaseBuilder {
         SqlCommandType sqlCommandType = SqlCommandType.valueOf(nodeName.toUpperCase(Locale.ENGLISH));
 
         // 获取默认语言驱动器
-//        Class<?> langClass = configuration.getLanguageRegistry().getDefaultDriverClass();
-//        LanguageDriver langDriver = configuration.getLanguageRegistry().getDriver(langClass);
-//        SqlSource sqlSource = langDriver.createSqlSource(configuration, element, parameterTypeClass);
+        Class<?> langClass = configuration.getLanguageRegistry().getDefaultDriverClass();
+        LanguageDriver langDriver = configuration.getLanguageRegistry().getDriver(langClass);
+        SqlSource sqlSource = langDriver.createSqlSource(configuration, element, parameterTypeClass);
 
-        XMLLanguageDriver xmlLanguageDriver = new XMLLanguageDriver();
-        xmlLanguageDriver.createSqlSource(configuration, element, parameterTypeClass);
+        MappedStatement mappedStatement = MappedStatement.builder()
+                .configuration(configuration)
+                .id(currentNamespace + "." + id)
+                .sqlCommandType(sqlCommandType)
+                .sqlSource(sqlSource)
+                .resultType(resultTypeClass).build();
 
-
-
-
+        // 添加解析 SQL
+        configuration.addMappedStatement(mappedStatement);
 
     }
 }

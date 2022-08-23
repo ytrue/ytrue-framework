@@ -37,5 +37,11 @@ public class MappedStatement {
     /**
      * 绑定Sql
      */
-    private BoundSql boundSql;
+    private SqlSource sqlSource;
+
+    /**
+     * 返回类型
+     */
+    Class<?> resultType;
+
 }

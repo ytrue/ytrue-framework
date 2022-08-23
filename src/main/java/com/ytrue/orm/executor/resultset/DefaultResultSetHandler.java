@@ -18,18 +18,18 @@ public class DefaultResultSetHandler implements ResultSetHandler {
 
 
     private final BoundSql boundSql;
-
+    private final MappedStatement mappedStatement;
 
     public DefaultResultSetHandler(Executor executor, MappedStatement mappedStatement, BoundSql boundSql) {
         this.boundSql = boundSql;
+        this.mappedStatement = mappedStatement;
     }
 
     @Override
     public <E> List<E> handleResultSets(Statement stmt) throws SQLException {
         ResultSet resultSet = stmt.getResultSet();
 
-        // TODO 这里要处理
-        return resultSet2Obj(resultSet, Object.class);
+        return resultSet2Obj(resultSet, mappedStatement.getResultType());
     }
 
     private <T> List<T> resultSet2Obj(ResultSet resultSet, Class<?> clazz) {

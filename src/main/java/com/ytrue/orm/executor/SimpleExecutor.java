@@ -39,6 +39,7 @@ public class SimpleExecutor extends BaseExecutor {
             Configuration configuration = ms.getConfiguration();
             StatementHandler handler = configuration.newStatementHandler(this, ms, parameter, resultHandler, boundSql);
             Connection connection = transaction.getConnection();
+
             Statement stmt = handler.prepare(connection);
             handler.parameterize(stmt);
             Object query = handler.query(stmt, resultHandler);
