@@ -1,4 +1,4 @@
-package com.ytrue.orm.transaction.type;
+package com.ytrue.orm.type;
 
 import java.sql.Types;
 import java.util.HashMap;

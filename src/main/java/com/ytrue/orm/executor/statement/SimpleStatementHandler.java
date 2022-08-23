@@ -3,7 +3,7 @@ package com.ytrue.orm.executor.statement;
 import com.ytrue.orm.executor.Executor;
 import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.MappedStatement;
-import sun.plugin2.main.server.ResultHandler;
+import com.ytrue.orm.session.ResultHandler;
 
 import java.sql.Connection;
 import java.sql.SQLException;

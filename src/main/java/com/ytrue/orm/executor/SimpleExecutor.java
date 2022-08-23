@@ -5,7 +5,7 @@ import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.session.Configuration;
 import com.ytrue.orm.transaction.Transaction;
-import sun.plugin2.main.server.ResultHandler;
+import com.ytrue.orm.session.ResultHandler;
 
 import java.sql.Connection;
 import java.sql.SQLException;

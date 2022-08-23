@@ -16,6 +16,7 @@ import org.dom4j.io.SAXReader;
 import org.xml.sax.InputSource;
 
 import javax.sql.DataSource;
+import java.io.InputStream;
 import java.io.Reader;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -123,82 +124,28 @@ public class XMLConfigBuilder extends BaseBuilder {
     /**
      * 解析mapper
      *
+     * <mappers>
+     * <mapper resource="org/mybatis/builder/AuthorMapper.xml"/>
+     * <mapper resource="org/mybatis/builder/BlogMapper.xml"/>
+     * <mapper resource="org/mybatis/builder/PostMapper.xml"/>
+     * </mappers>
+     *
      * @param mappers
      * @throws Exception
      */
     private void mapperElement(Element mappers) throws Exception {
         // 获取mapper标签，有多个循环
         List<Element> mapperList = mappers.elements("mapper");
-
         for (Element e : mapperList) {
-
             // 获取mapper标签的 resource 属性
             String resource = e.attributeValue("resource");
-
             // 再去解析 mapper resource 属性对应的xml文件的内容
-            Reader reader = Resources.getResourceAsReader(resource);
-            SAXReader saxReader = new SAXReader();
-            Document document = saxReader.read(new InputSource(reader));
-            Element root = document.getRootElement();
+            InputStream inputStream = Resources.getResourceAsStream(resource);
 
-            //获取对的 mapper 文件的 namespace 属性值
-            String namespace = root.attributeValue("namespace");
-
-            // 获取 select 标签
-            List<Element> selectNodes = root.elements("select");
-            // 解析每个 select 标签的内容
-            for (Element node : selectNodes) {
-                // 获取 id值
-                String id = node.attributeValue("id");
-                // 获取参数的类型
-                String parameterType = node.attributeValue("parameterType");
-                // 获取返回类型
-                String resultType = node.attributeValue("resultType");
-                // 获取 select 标签的文本内容，也就是sql语句
-                String sql = node.getText();
-
-                // ? 匹配
-                Map<Integer, String> parameter = new HashMap<>();
-                Pattern pattern = Pattern.compile("(#\\{(.*?)})");
-                Matcher matcher = pattern.matcher(sql);
-
-                for (int i = 1; matcher.find(); i++) {
-                    // #{id}    #{name}
-                    String g1 = matcher.group(1);
-                    // id       name
-                    String g2 = matcher.group(2);
-                    // 参数  0=>id, 1=>name
-                    parameter.put(i, g2);
-                    // 包含#{}的内容替换成 ?
-                    sql = sql.replace(g1, "?");
-                }
-
-                // 组装 命名空空间 + dao的方法名称
-                String msId = namespace + "." + id;
-
-                // 获取标签的名称，这里获取的是 select
-                String nodeName = node.getName();
-                // 创建 select SqlCommandType
-                SqlCommandType sqlCommandType = SqlCommandType.valueOf(nodeName.toUpperCase(Locale.ENGLISH));
-
-                BoundSql boundSql = new BoundSql(sql, parameter, parameterType, resultType);
-                // 构建 MappedStatement 这里使用构建者去构建
-                MappedStatement mappedStatement = MappedStatement
-                        .builder()
-                        .configuration(configuration)
-                        .id(msId)
-                        .sqlCommandType(sqlCommandType)
-                        .boundSql(boundSql)
-                        .build();
-
-                // 添加解析 SQL
-                configuration.addMappedStatement(mappedStatement);
-            }
-
-            // 注册Mapper映射器
-            configuration.addMapper(Resources.classForName(namespace));
+            // 在for循环里每个mapper都重新new一个XMLMapperBuilder，来解析
+            XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, configuration, resource);
+            mapperParser.parse();
         }
-
     }
 
 

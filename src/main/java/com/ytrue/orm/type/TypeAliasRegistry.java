@@ -1,4 +1,6 @@
-package com.ytrue.orm.transaction.type;
+package com.ytrue.orm.type;
+
+import com.ytrue.orm.io.Resources;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -48,7 +50,21 @@ public class TypeAliasRegistry {
      * @return
      */
     public <T> Class<T> resolveAlias(String string) {
-        String key = string.toLowerCase(Locale.ENGLISH);
-        return (Class<T>) TYPE_ALIASES.get(key);
+        try {
+            if (string == null) {
+                return null;
+            }
+            String key = string.toLowerCase(Locale.ENGLISH);
+            Class<T> value;
+            if (TYPE_ALIASES.containsKey(key)) {
+                value = (Class<T>) TYPE_ALIASES.get(key);
+            } else {
+                // 直接class
+                value = (Class<T>) Resources.classForName(string);
+            }
+            return value;
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Could not resolve type alias '" + string + "'.  Cause: " + e, e);
+        }
     }
 }

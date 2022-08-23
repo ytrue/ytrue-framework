@@ -30,17 +30,17 @@ public class ApiTest {
         Reader reader = Resources.getResourceAsReader("ytrue-orm-config.xml");
 
         SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(reader);
-        SqlSession sqlSession = sqlSessionFactory.openSession();
-
-        // 2. 生成代理对象
-        IUserDao userDao = sqlSession.getMapper(IUserDao.class);
-
-
-        // 3. 测试验证
-        for (int i = 0; i < 50; i++) {
-            User user = userDao.queryUserInfoById(1L);
-            log.info("测试结果：{}", user.toString());
-        }
+//        SqlSession sqlSession = sqlSessionFactory.openSession();
+//
+//        // 2. 生成代理对象
+//        IUserDao userDao = sqlSession.getMapper(IUserDao.class);
+//
+//
+//        // 3. 测试验证
+//        for (int i = 0; i < 50; i++) {
+//            User user = userDao.queryUserInfoById(1L);
+//            log.info("测试结果：{}", user.toString());
+//        }
     }
 
 //    @Test

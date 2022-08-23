@@ -1,7 +1,7 @@
 package com.ytrue.orm.builder;
 
 import com.ytrue.orm.session.Configuration;
-import com.ytrue.orm.transaction.type.TypeAliasRegistry;
+import com.ytrue.orm.type.TypeAliasRegistry;
 
 /**
  * @author ytrue
@@ -20,5 +20,11 @@ public class BaseBuilder {
 
     public Configuration getConfiguration() {
         return configuration;
+    }
+
+
+
+    protected Class<?> resolveAlias(String alias) {
+        return typeAliasRegistry.resolveAlias(alias);
     }
 }

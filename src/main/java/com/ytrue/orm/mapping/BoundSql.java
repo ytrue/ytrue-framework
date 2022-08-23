@@ -1,8 +1,12 @@
 package com.ytrue.orm.mapping;
 
+import com.ytrue.orm.reflection.MetaObject;
+import com.ytrue.orm.session.Configuration;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,17 +25,31 @@ public class BoundSql {
     private String sql;
 
     /**
-     * Dao方法的参数
+     * 参数映射 #{property,javaType=int,jdbcType=NUMERIC}
      */
-    private Map<Integer, String> parameterMappings;
+    private List<ParameterMapping> parameterMappings;
 
     /**
-     * 参数类型
+     * 参数对象
      */
-    private String parameterType;
+    private Object parameterObject;
 
     /**
-     * 返回类型
+     * 附加参数
      */
-    private String resultType;
+    private Map<String, Object> additionalParameters;
+
+
+    /**
+     * 参数的 MetaObject
+     */
+    private MetaObject metaParameters;
+
+    public BoundSql(Configuration configuration, String sql, List<ParameterMapping> parameterMappings, Object parameterObject) {
+        this.sql = sql;
+        this.parameterMappings = parameterMappings;
+        this.parameterObject = parameterObject;
+        this.additionalParameters = new HashMap<>();
+        this.metaParameters = configuration.newMetaObject(additionalParameters);
+    }
 }

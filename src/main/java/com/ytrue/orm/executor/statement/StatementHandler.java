@@ -1,6 +1,6 @@
 package com.ytrue.orm.executor.statement;
 
-import sun.plugin2.main.server.ResultHandler;
+import com.ytrue.orm.session.ResultHandler;
 
 import java.sql.Connection;
 import java.sql.SQLException;

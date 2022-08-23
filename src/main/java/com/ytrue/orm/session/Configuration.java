@@ -13,15 +13,22 @@ import com.ytrue.orm.executor.statement.StatementHandler;
 import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.Environment;
 import com.ytrue.orm.mapping.MappedStatement;
+import com.ytrue.orm.reflection.MetaObject;
+import com.ytrue.orm.reflection.factory.DefaultObjectFactory;
+import com.ytrue.orm.reflection.factory.ObjectFactory;
+import com.ytrue.orm.reflection.wrapper.DefaultObjectWrapperFactory;
+import com.ytrue.orm.reflection.wrapper.ObjectWrapperFactory;
 import com.ytrue.orm.transaction.Transaction;
 import com.ytrue.orm.transaction.jdbc.JdbcTransactionFactory;
-import com.ytrue.orm.transaction.type.TypeAliasRegistry;
+import com.ytrue.orm.type.TypeAliasRegistry;
 import lombok.Getter;
 import lombok.Setter;
-import sun.plugin2.main.server.ResultHandler;
+import com.ytrue.orm.session.ResultHandler;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author ytrue
@@ -53,6 +60,21 @@ public class Configuration {
      */
     @Getter
     protected final TypeAliasRegistry typeAliasRegistry = new TypeAliasRegistry();
+
+
+    /**
+     * 加载过的 mapper.xml
+     */
+    protected final Set<String> loadedResources = new HashSet<>();
+
+
+    /**
+     * 对象工厂和对象包装器工厂
+     */
+    protected ObjectFactory objectFactory = new DefaultObjectFactory();
+    protected ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
+
+    protected String databaseId;
 
     public Configuration() {
         // 注册jdbc事务管理器
@@ -146,4 +168,38 @@ public class Configuration {
         return new PreparedStatementHandler(executor, mappedStatement, parameter, resultHandler, boundSql);
     }
 
+
+    /**
+     * mapper是否加载过了
+     *
+     * @param resource
+     * @return
+     */
+    public boolean isResourceLoaded(String resource) {
+        return loadedResources.contains(resource);
+    }
+
+    /**
+     * 添加已经加载的mapper文件
+     *
+     * @param resource
+     */
+    public void addLoadedResource(String resource) {
+        loadedResources.add(resource);
+    }
+
+
+    /**
+     * 创建元对象
+     *
+     * @param object
+     * @return
+     */
+    public MetaObject newMetaObject(Object object) {
+        return MetaObject.forObject(object, objectFactory, objectWrapperFactory);
+    }
+
+    public String getDatabaseId() {
+        return databaseId;
+    }
 }
