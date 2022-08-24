@@ -1,6 +1,7 @@
 package com.ytrue.orm.executor.statement;
 
 import com.ytrue.orm.executor.Executor;
+import com.ytrue.orm.executor.parameter.ParameterHandler;
 import com.ytrue.orm.executor.resultset.ResultSetHandler;
 import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.MappedStatement;
@@ -23,6 +24,7 @@ public abstract class BaseStatementHandler implements StatementHandler {
 
     protected final Object parameterObject;
     protected final ResultSetHandler resultSetHandler;
+    protected final ParameterHandler parameterHandler;
 
     protected BoundSql boundSql;
 
@@ -34,6 +36,7 @@ public abstract class BaseStatementHandler implements StatementHandler {
 
         this.parameterObject = parameterObject;
         this.resultSetHandler = configuration.newResultSetHandler(executor, mappedStatement, boundSql);
+        this.parameterHandler = configuration.newParameterHandler(mappedStatement, parameterObject, boundSql);
     }
 
 

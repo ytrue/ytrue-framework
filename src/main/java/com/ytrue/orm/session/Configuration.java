@@ -6,6 +6,7 @@ import com.ytrue.orm.datasource.pooled.PooledDataSourceFactory;
 import com.ytrue.orm.datasource.unpooled.UnpooledDataSourceFactory;
 import com.ytrue.orm.executor.Executor;
 import com.ytrue.orm.executor.SimpleExecutor;
+import com.ytrue.orm.executor.parameter.ParameterHandler;
 import com.ytrue.orm.executor.resultset.DefaultResultSetHandler;
 import com.ytrue.orm.executor.resultset.ResultSetHandler;
 import com.ytrue.orm.executor.statement.PreparedStatementHandler;
@@ -214,6 +215,21 @@ public class Configuration {
      */
     public MetaObject newMetaObject(Object object) {
         return MetaObject.forObject(object, objectFactory, objectWrapperFactory);
+    }
+
+
+    /**
+     * 参数处理器
+     *
+     * @param mappedStatement
+     * @param parameterObject
+     * @param boundSql
+     * @return
+     */
+    public ParameterHandler newParameterHandler(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql) {
+        // 创建参数处理器
+        ParameterHandler parameterHandler = mappedStatement.getLang().createParameterHandler(mappedStatement, parameterObject, boundSql);
+        return parameterHandler;
     }
 
 }

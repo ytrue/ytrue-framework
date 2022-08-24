@@ -1,5 +1,6 @@
 package com.ytrue.orm.mapping;
 
+import com.ytrue.orm.scripting.LanguageDriver;
 import com.ytrue.orm.session.Configuration;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,5 +44,10 @@ public class MappedStatement {
      * 返回类型
      */
     Class<?> resultType;
+
+    /**
+     * 脚本语言驱动
+     */
+    private LanguageDriver lang;
 
 }

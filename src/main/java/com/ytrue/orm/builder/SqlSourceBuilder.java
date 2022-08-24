@@ -4,6 +4,7 @@ import com.ytrue.orm.mapping.ParameterMapping;
 import com.ytrue.orm.mapping.SqlSource;
 import com.ytrue.orm.parsing.GenericTokenParser;
 import com.ytrue.orm.parsing.TokenHandler;
+import com.ytrue.orm.reflection.MetaClass;
 import com.ytrue.orm.reflection.MetaObject;
 import com.ytrue.orm.session.Configuration;
 
@@ -85,14 +86,35 @@ public class SqlSourceBuilder extends BaseBuilder {
             // key == property ,value == id
             Map<String, String> propertiesMap = new ParameterExpression(content);
             String property = propertiesMap.get("property");
-            Class<?> propertyType = parameterType;
 
-            return ParameterMapping
-                    .builder()
-                    .configuration(configuration)
-                    .property(property)
-                    .javaType(propertyType)
-                    .build();
+            Class<?> propertyType;
+
+            /*
+                三种情况
+                    1. parameterType == Long 类型 直接赋值因为在类型处理注册器有
+                    2. 类型处理注册器没有，但是它不为空,这个时候就要把它当成一个对象处理
+                        ，如果这个对象里面没有 property对应的 get方法就是返回Object 负责返回对应的类型
+
+                    3. 直接返回Object类型
+             */
+            if (typeHandlerRegistry.hasTypeHandler(parameterType)) {
+                propertyType = parameterType;
+            } else if (property != null) {
+                // 反射处理对象
+                MetaClass metaClass = MetaClass.forClass(parameterType);
+                // 如果是一个对象，这里回去判断 getId() 这个方法是否存在,存在就返回get方法返回的类型
+                if (metaClass.hasGetter(property)) {
+                    propertyType = metaClass.getGetterType(property);
+                } else {
+                    propertyType = Object.class;
+                }
+            } else {
+                propertyType = Object.class;
+            }
+            // 如果parameterType ==null 这里 的类型处理器是空会导致null
+
+            return new ParameterMapping.Builder(configuration, property, propertyType).build();
+
         }
 
     }

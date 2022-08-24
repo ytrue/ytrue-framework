@@ -16,10 +16,6 @@ public class UnpooledDataSourceTest {
     public void test01() {
 
         UnpooledDataSource unpooledDataSource = new UnpooledDataSource();
-
-
-
-
     }
 
 }

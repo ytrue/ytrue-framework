@@ -2,6 +2,7 @@ package com.ytrue.orm.builder;
 
 import com.ytrue.orm.session.Configuration;
 import com.ytrue.orm.type.TypeAliasRegistry;
+import com.ytrue.orm.type.TypeHandlerRegistry;
 
 /**
  * @author ytrue
@@ -12,10 +13,12 @@ public class BaseBuilder {
 
     protected final TypeAliasRegistry typeAliasRegistry;
     protected final Configuration configuration;
+    protected final TypeHandlerRegistry typeHandlerRegistry;
 
     public BaseBuilder(Configuration configuration) {
         this.configuration = configuration;
         this.typeAliasRegistry = this.configuration.getTypeAliasRegistry();
+        this.typeHandlerRegistry = this.configuration.getTypeHandlerRegistry();
     }
 
     public Configuration getConfiguration() {

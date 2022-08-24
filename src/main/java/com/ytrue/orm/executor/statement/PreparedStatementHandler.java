@@ -32,7 +32,7 @@ public class PreparedStatementHandler extends BaseStatementHandler {
     public void parameterize(Statement statement) throws SQLException {
         PreparedStatement ps = (PreparedStatement) statement;
         // 设置参数
-        ps.setLong(1, Long.parseLong(((Object[]) parameterObject)[0].toString()));
+        parameterHandler.setParameters(ps);
     }
 
     @Override
@@ -41,6 +41,6 @@ public class PreparedStatementHandler extends BaseStatementHandler {
         // 执行sql
         ps.execute();
 
-        return resultSetHandler.<E> handleResultSets(ps);
+        return resultSetHandler.handleResultSets(ps);
     }
 }

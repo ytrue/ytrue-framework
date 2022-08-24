@@ -1,5 +1,8 @@
 package com.ytrue.orm.scripting;
 
+import com.ytrue.orm.executor.parameter.ParameterHandler;
+import com.ytrue.orm.mapping.BoundSql;
+import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.mapping.SqlSource;
 import com.ytrue.orm.session.Configuration;
 import org.dom4j.Element;
@@ -16,6 +19,24 @@ import org.dom4j.Element;
  */
 public interface LanguageDriver {
 
+    /**
+     * 创建SqlSource
+     *
+     * @param configuration
+     * @param script
+     * @param parameterType
+     * @return
+     */
     SqlSource createSqlSource(Configuration configuration, Element script, Class<?> parameterType);
+
+    /**
+     * 创建参数处理器
+     *
+     * @param mappedStatement
+     * @param parameterObject
+     * @param boundSql
+     * @return
+     */
+    ParameterHandler createParameterHandler(MappedStatement mappedStatement, Object parameterObject, BoundSql boundSql);
 
 }

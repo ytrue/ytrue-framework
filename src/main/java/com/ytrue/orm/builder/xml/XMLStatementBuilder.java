@@ -81,6 +81,7 @@ public class XMLStatementBuilder extends BaseBuilder {
                 .id(currentNamespace + "." + id)
                 .sqlCommandType(sqlCommandType)
                 .sqlSource(sqlSource)
+                .lang(langDriver)
                 .resultType(resultTypeClass).build();
 
         // 添加解析 SQL
