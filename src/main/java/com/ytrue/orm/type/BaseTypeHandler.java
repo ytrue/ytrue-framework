@@ -3,6 +3,7 @@ package com.ytrue.orm.type;
 import com.ytrue.orm.session.Configuration;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
@@ -44,4 +45,18 @@ public abstract class BaseTypeHandler<T> implements TypeHandler<T> {
      */
     protected abstract void setNonNullParameter(PreparedStatement ps, int i, T parameter, JdbcType jdbcType) throws SQLException;
 
+
+    @Override
+    public T getResult(ResultSet rs, String columnName) throws SQLException {
+        return getNullableResult(rs, columnName);
+    }
+
+    /**
+     * 获取结果
+     *
+     * @param rs
+     * @param columnName
+     * @return
+     */
+    protected abstract T getNullableResult(ResultSet rs, String columnName) throws SQLException;
 }

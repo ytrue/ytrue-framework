@@ -9,6 +9,6 @@ import com.ytrue.orm.test.po.User;
  */
 public interface IUserDao {
 
-    User queryUserInfoById(Long uId);
+    User queryUserInfoById(Long uId, String name);
 
 }

@@ -2,8 +2,9 @@ package com.ytrue.orm.executor;
 
 import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.MappedStatement;
-import com.ytrue.orm.transaction.Transaction;
 import com.ytrue.orm.session.ResultHandler;
+import com.ytrue.orm.session.RowBounds;
+import com.ytrue.orm.transaction.Transaction;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -23,12 +24,13 @@ public interface Executor {
      *
      * @param ms
      * @param parameter
+     * @param rowBounds
      * @param resultHandler
      * @param boundSql
      * @param <E>
      * @return
      */
-    <E> List<E> query(MappedStatement ms, Object parameter, ResultHandler resultHandler, BoundSql boundSql);
+    <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql);
 
     /**
      * 获取事务管理器

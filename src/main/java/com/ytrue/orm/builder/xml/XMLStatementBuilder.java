@@ -1,11 +1,10 @@
 package com.ytrue.orm.builder.xml;
 
 import com.ytrue.orm.builder.BaseBuilder;
-import com.ytrue.orm.mapping.MappedStatement;
+import com.ytrue.orm.builder.MapperBuilderAssistant;
 import com.ytrue.orm.mapping.SqlCommandType;
 import com.ytrue.orm.mapping.SqlSource;
 import com.ytrue.orm.scripting.LanguageDriver;
-import com.ytrue.orm.scripting.xmltags.XMLLanguageDriver;
 import com.ytrue.orm.session.Configuration;
 import org.dom4j.Element;
 
@@ -18,10 +17,11 @@ import java.util.Locale;
  */
 public class XMLStatementBuilder extends BaseBuilder {
 
+
     /**
-     * 当前的命名空间
+     * 映射构建器助手
      */
-    private String currentNamespace;
+    private MapperBuilderAssistant builderAssistant;
 
 
     /**
@@ -30,10 +30,10 @@ public class XMLStatementBuilder extends BaseBuilder {
     private Element element;
 
 
-    public XMLStatementBuilder(Configuration configuration, Element element, String currentNamespace) {
+    public XMLStatementBuilder(Configuration configuration, MapperBuilderAssistant builderAssistant, Element element) {
         super(configuration);
+        this.builderAssistant = builderAssistant;
         this.element = element;
-        this.currentNamespace = currentNamespace;
     }
 
 
@@ -65,6 +65,9 @@ public class XMLStatementBuilder extends BaseBuilder {
         String resultType = element.attributeValue("resultType");
         Class<?> resultTypeClass = resolveAlias(resultType);
 
+        // 外部应用 resultMap
+        String resultMap = element.attributeValue("resultMap");
+
 
         // 获取命令类型(select|insert|update|delete)
         String nodeName = element.getName();
@@ -74,18 +77,16 @@ public class XMLStatementBuilder extends BaseBuilder {
         // 获取默认语言驱动器
         Class<?> langClass = configuration.getLanguageRegistry().getDefaultDriverClass();
         LanguageDriver langDriver = configuration.getLanguageRegistry().getDriver(langClass);
+
         SqlSource sqlSource = langDriver.createSqlSource(configuration, element, parameterTypeClass);
 
-        MappedStatement mappedStatement = MappedStatement.builder()
-                .configuration(configuration)
-                .id(currentNamespace + "." + id)
-                .sqlCommandType(sqlCommandType)
-                .sqlSource(sqlSource)
-                .lang(langDriver)
-                .resultType(resultTypeClass).build();
-
-        // 添加解析 SQL
-        configuration.addMappedStatement(mappedStatement);
-
+        // 调用助手类
+        builderAssistant.addMappedStatement(id,
+                sqlSource,
+                sqlCommandType,
+                parameterTypeClass,
+                resultMap,
+                resultTypeClass,
+                langDriver);
     }
 }

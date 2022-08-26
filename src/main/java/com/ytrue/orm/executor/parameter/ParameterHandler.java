@@ -11,11 +11,13 @@ import java.sql.SQLException;
 public interface ParameterHandler {
 
     /**
+     * 获取参数
      * @return
      */
     Object getParameterObject();
 
     /**
+     * 设置参数
      * @param ps
      * @throws SQLException
      */

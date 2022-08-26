@@ -112,7 +112,6 @@ public class SqlSourceBuilder extends BaseBuilder {
                 propertyType = Object.class;
             }
             // 如果parameterType ==null 这里 的类型处理器是空会导致null
-
             return new ParameterMapping.Builder(configuration, property, propertyType).build();
 
         }

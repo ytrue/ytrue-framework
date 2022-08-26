@@ -3,6 +3,7 @@ package com.ytrue.orm.executor;
 import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.session.Configuration;
+import com.ytrue.orm.session.RowBounds;
 import com.ytrue.orm.transaction.Transaction;
 import lombok.extern.slf4j.Slf4j;
 import com.ytrue.orm.session.ResultHandler;
@@ -34,24 +35,27 @@ public abstract class BaseExecutor implements Executor {
     }
 
     @Override
-    public <E> List<E> query(MappedStatement ms, Object parameter, ResultHandler resultHandler, BoundSql boundSql) {
+    public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
         if (closed) {
             throw new RuntimeException("Executor was closed.");
         }
-        return doQuery(ms, parameter, resultHandler, boundSql);
+        return doQuery(ms, parameter, rowBounds, resultHandler, boundSql);
     }
+
 
     /**
      * 真正执行的方法
      *
      * @param ms
      * @param parameter
+     * @param rowBounds
      * @param resultHandler
      * @param boundSql
      * @param <E>
      * @return
      */
-    protected abstract <E> List<E> doQuery(MappedStatement ms, Object parameter, ResultHandler resultHandler, BoundSql boundSql);
+    protected abstract <E> List<E> doQuery(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql);
+
 
     @Override
     public Transaction getTransaction() {

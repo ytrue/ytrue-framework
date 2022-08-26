@@ -40,7 +40,7 @@ public class XMLConfigBuilder extends BaseBuilder {
     public XMLConfigBuilder(Reader reader) {
         // 1. 调用父类初始化Configuration
         super(new Configuration());
-        // 2. dom4j 处理 xml
+        // 2. dom4j 处理 xml,mybatis是对dom4j做了封装了这里就不做了直接使用
         SAXReader saxReader = new SAXReader();
         try {
             // 获取xml 获取document

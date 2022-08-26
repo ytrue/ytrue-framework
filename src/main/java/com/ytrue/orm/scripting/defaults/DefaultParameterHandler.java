@@ -67,6 +67,7 @@ public class DefaultParameterHandler implements ParameterHandler {
                     value = metaObject.getValue(propertyName);
                 }
 
+
                 JdbcType jdbcType = parameterMapping.getJdbcType();
 
                 // 设置参数

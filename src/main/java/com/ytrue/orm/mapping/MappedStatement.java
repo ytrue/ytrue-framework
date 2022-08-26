@@ -7,7 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Map;
+import java.util.List;
 
 /**
  * @author ytrue
@@ -15,7 +15,6 @@ import java.util.Map;
  * @description MappedStatement维护一条<select | update | delete | insert>节点的封装。
  */
 @Data
-@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class MappedStatement {
@@ -49,5 +48,45 @@ public class MappedStatement {
      * 脚本语言驱动
      */
     private LanguageDriver lang;
+
+    /**
+     * 返回结果
+     */
+    private List<ResultMap> resultMaps;
+
+
+    /**
+     * 建造者
+     */
+    public static class Builder {
+
+        private MappedStatement mappedStatement = new MappedStatement();
+
+        public Builder(Configuration configuration, String id, SqlCommandType sqlCommandType, SqlSource sqlSource, Class<?> resultType) {
+            mappedStatement.configuration = configuration;
+            mappedStatement.id = id;
+            mappedStatement.sqlCommandType = sqlCommandType;
+            mappedStatement.sqlSource = sqlSource;
+            mappedStatement.resultType = resultType;
+            mappedStatement.lang = configuration.getDefaultScriptingLanguageInstance();
+        }
+
+        public MappedStatement build() {
+            assert mappedStatement.configuration != null;
+            assert mappedStatement.id != null;
+            return mappedStatement;
+        }
+
+        public String id() {
+            return mappedStatement.id;
+        }
+
+        public Builder resultMaps(List<ResultMap> resultMaps) {
+            mappedStatement.resultMaps = resultMaps;
+            return this;
+        }
+
+    }
+
 
 }

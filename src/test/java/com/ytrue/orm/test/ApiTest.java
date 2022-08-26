@@ -35,10 +35,10 @@ public class ApiTest {
 
 
         // 3. 测试验证
-        for (int i = 0; i < 50; i++) {
-            User user = userDao.queryUserInfoById(1L);
+        //for (int i = 0; i < 50; i++) {
+            User user = userDao.queryUserInfoById(1L,"ytrue");
             log.info("测试结果：{}", user.toString());
-        }
+      //  }
     }
 
 //    @Test

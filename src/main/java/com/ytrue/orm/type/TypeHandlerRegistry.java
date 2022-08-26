@@ -36,6 +36,10 @@ public class TypeHandlerRegistry {
         register(String.class, JdbcType.VARCHAR, new StringTypeHandler());
 
 
+        // 处理object
+        register(Object.class, new ObjectTypeHandler());
+
+
     }
 
     /**

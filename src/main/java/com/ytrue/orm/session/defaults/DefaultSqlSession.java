@@ -3,6 +3,7 @@ package com.ytrue.orm.session.defaults;
 import com.ytrue.orm.executor.Executor;
 import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.session.Configuration;
+import com.ytrue.orm.session.RowBounds;
 import com.ytrue.orm.session.SqlSession;
 
 import java.util.List;
@@ -24,21 +25,15 @@ public class DefaultSqlSession implements SqlSession {
 
     @Override
     public <T> T selectOne(String statement) {
-        return (T) ("你被代理了！" + statement);
+        return this.selectOne(statement, null);
     }
 
     @Override
     public <T> T selectOne(String statement, Object parameter) {
-        try {
-            MappedStatement ms = configuration.getMappedStatement(statement);
-            // 交给 executor 处理
-            List<T> list = executor.query(ms, parameter, Executor.NO_RESULT_HANDLER, ms.getSqlSource().getBoundSql(parameter));
-            return list.get(0);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        MappedStatement ms = configuration.getMappedStatement(statement);
+        // 交给 executor 处理
+        List<T> list = executor.query(ms, parameter, RowBounds.DEFAULT, Executor.NO_RESULT_HANDLER, ms.getSqlSource().getBoundSql(parameter));
+        return list.get(0);
     }
 
     /**

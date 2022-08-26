@@ -19,6 +19,7 @@ import com.ytrue.orm.reflection.factory.DefaultObjectFactory;
 import com.ytrue.orm.reflection.factory.ObjectFactory;
 import com.ytrue.orm.reflection.wrapper.DefaultObjectWrapperFactory;
 import com.ytrue.orm.reflection.wrapper.ObjectWrapperFactory;
+import com.ytrue.orm.scripting.LanguageDriver;
 import com.ytrue.orm.scripting.LanguageDriverRegistry;
 import com.ytrue.orm.scripting.xmltags.XMLLanguageDriver;
 import com.ytrue.orm.transaction.Transaction;
@@ -74,6 +75,7 @@ public class Configuration {
     /**
      * 对象工厂和对象包装器工厂
      */
+    @Getter
     protected ObjectFactory objectFactory = new DefaultObjectFactory();
     protected ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
 
@@ -168,8 +170,8 @@ public class Configuration {
     /**
      * 创建结果集处理器
      */
-    public ResultSetHandler newResultSetHandler(Executor executor, MappedStatement mappedStatement, BoundSql boundSql) {
-        return new DefaultResultSetHandler(executor, mappedStatement, boundSql);
+    public ResultSetHandler newResultSetHandler(Executor executor, MappedStatement mappedStatement, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+        return new DefaultResultSetHandler(executor, mappedStatement, resultHandler, rowBounds, boundSql);
     }
 
     /**
@@ -182,10 +184,9 @@ public class Configuration {
     /**
      * 创建语句处理器
      */
-    public StatementHandler newStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameter, ResultHandler resultHandler, BoundSql boundSql) {
-        return new PreparedStatementHandler(executor, mappedStatement, parameter, resultHandler, boundSql);
+    public StatementHandler newStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+        return new PreparedStatementHandler(executor, mappedStatement, parameter, rowBounds, resultHandler, boundSql);
     }
-
 
     /**
      * mapper是否加载过了
@@ -232,4 +233,8 @@ public class Configuration {
         return parameterHandler;
     }
 
+
+    public LanguageDriver getDefaultScriptingLanguageInstance() {
+        return languageRegistry.getDefaultDriver();
+    }
 }

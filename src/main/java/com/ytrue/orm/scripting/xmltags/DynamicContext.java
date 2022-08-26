@@ -1,6 +1,5 @@
 package com.ytrue.orm.scripting.xmltags;
 
-import com.sun.xml.internal.ws.spi.db.DatabindingException;
 import com.ytrue.orm.reflection.MetaObject;
 import com.ytrue.orm.session.Configuration;
 import ognl.OgnlContext;
