@@ -38,4 +38,11 @@ public class SimpleStatementHandler extends BaseStatementHandler {
         statement.execute(sql);
         return resultSetHandler.handleResultSets(statement);
     }
+
+    @Override
+    public int update(Statement statement) throws SQLException {
+        String sql = boundSql.getSql();
+        statement.execute(sql);
+        return statement.getUpdateCount();
+    }
 }

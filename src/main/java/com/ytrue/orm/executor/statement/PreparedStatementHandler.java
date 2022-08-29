@@ -44,4 +44,19 @@ public class PreparedStatementHandler extends BaseStatementHandler {
 
         return resultSetHandler.handleResultSets(ps);
     }
+
+
+    /**
+     * 新增修改方法
+     *
+     * @param statement
+     * @return
+     * @throws SQLException
+     */
+    @Override
+    public int update(Statement statement) throws SQLException {
+        PreparedStatement ps = (PreparedStatement) statement;
+        ps.execute();
+        return ps.getUpdateCount();
+    }
 }

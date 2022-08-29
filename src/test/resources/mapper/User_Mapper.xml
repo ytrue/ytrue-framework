@@ -2,10 +2,37 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.ytrue.orm.test.dao.IUserDao">
 
-     <select id="queryUserInfoById" resultType="com.ytrue.orm.test.po.User">
+    <select id="queryUserInfoById" parameterType="java.lang.Long" resultType="com.ytrue.orm.test.po.User">
         SELECT id, userId, userName, userHead
         FROM user
-        where id = #{param1} and userName = #{param2}
+        where id = #{id}
     </select>
+
+    <select id="queryUserInfo" parameterType="com.ytrue.orm.test.po.User" resultType="com.ytrue.orm.test.po.User">
+        SELECT id, userId, userName, userHead
+        FROM user
+        where id = #{id} and userId = #{userId}
+    </select>
+
+    <select id="queryUserInfoList" resultType="com.ytrue.orm.test.po.User">
+        SELECT id, userId, userName, userHead
+        FROM user
+    </select>
+
+    <update id="updateUserInfo" parameterType="com.ytrue.orm.test.po.User">
+        UPDATE user
+        SET userName = #{userName}
+        WHERE id = #{id}
+    </update>
+
+    <insert id="insertUserInfo" parameterType="com.ytrue.orm.test.po.User">
+       INSERT INTO user
+       (userId, userName, userHead, createTime, updateTime)
+       VALUES (#{userId}, #{userName}, #{userHead}, now(), now())
+    </insert>
+
+    <delete id="deleteUserInfoByUserId" parameterType="java.lang.String">
+        DELETE FROM user WHERE userId = #{userId}
+    </delete>
 
 </mapper>

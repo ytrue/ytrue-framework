@@ -1,11 +1,14 @@
 package com.ytrue.orm.session.defaults;
 
+import com.alibaba.fastjson.JSON;
 import com.ytrue.orm.executor.Executor;
 import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.session.Configuration;
 import com.ytrue.orm.session.RowBounds;
 import com.ytrue.orm.session.SqlSession;
+import lombok.extern.slf4j.Slf4j;
 
+import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -13,6 +16,7 @@ import java.util.List;
  * @date 2022/8/11 15:25
  * @description 默认SqlSession实现类
  */
+@Slf4j
 public class DefaultSqlSession implements SqlSession {
 
     private Configuration configuration;
@@ -30,10 +34,57 @@ public class DefaultSqlSession implements SqlSession {
 
     @Override
     public <T> T selectOne(String statement, Object parameter) {
+        // 取一条即可，如果存在多条抛出异常
+        List<T> list = this.selectList(statement, parameter);
+        if (list.size() == 1) {
+            return list.get(0);
+        } else if (list.size() > 1) {
+            throw new RuntimeException("Expected one result (or null) to be returned by selectOne(), but found: " + list.size());
+        } else {
+            return null;
+        }
+    }
+
+
+    @Override
+    public <E> List<E> selectList(String statement, Object parameter) {
+        log.debug("执行查询 statement：{} parameter：{}", statement, JSON.toJSONString(parameter));
         MappedStatement ms = configuration.getMappedStatement(statement);
-        // 交给 executor 处理
-        List<T> list = executor.query(ms, parameter, RowBounds.DEFAULT, Executor.NO_RESULT_HANDLER, ms.getSqlSource().getBoundSql(parameter));
-        return list.get(0);
+        try {
+            return executor.query(ms, parameter, RowBounds.DEFAULT, Executor.NO_RESULT_HANDLER, ms.getSqlSource().getBoundSql(parameter));
+        } catch (SQLException e) {
+            throw new RuntimeException("Error querying database.  Cause: " + e);
+        }
+    }
+
+    @Override
+    public int insert(String statement, Object parameter) {
+        // 在 Mybatis 中 insert 调用的是 update
+        return update(statement, parameter);
+    }
+
+    @Override
+    public int update(String statement, Object parameter) {
+        MappedStatement ms = configuration.getMappedStatement(statement);
+        try {
+            return executor.update(ms, parameter);
+        } catch (SQLException e) {
+            throw new RuntimeException("Error updating database.  Cause: " + e);
+        }
+    }
+
+    @Override
+    public Object delete(String statement, Object parameter) {
+        return update(statement, parameter);
+    }
+
+    @Override
+    public void commit() {
+        try {
+            executor.commit(true);
+        } catch (SQLException e) {
+            throw new RuntimeException("Error committing transaction.  Cause: " + e);
+        }
     }
 
     /**

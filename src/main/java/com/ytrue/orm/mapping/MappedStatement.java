@@ -54,6 +54,13 @@ public class MappedStatement {
      */
     private List<ResultMap> resultMaps;
 
+    /**
+     * step-11 新增方法
+     */
+    public BoundSql getBoundSql(Object parameterObject) {
+        // 调用 SqlSource#getBoundSql
+        return sqlSource.getBoundSql(parameterObject);
+    }
 
     /**
      * 建造者

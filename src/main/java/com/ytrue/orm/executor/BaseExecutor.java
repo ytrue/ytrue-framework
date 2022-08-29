@@ -3,12 +3,13 @@ package com.ytrue.orm.executor;
 import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.session.Configuration;
+import com.ytrue.orm.session.ResultHandler;
 import com.ytrue.orm.session.RowBounds;
 import com.ytrue.orm.transaction.Transaction;
 import lombok.extern.slf4j.Slf4j;
-import com.ytrue.orm.session.ResultHandler;
 
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
 /**
@@ -35,7 +36,7 @@ public abstract class BaseExecutor implements Executor {
     }
 
     @Override
-    public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+    public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
         if (closed) {
             throw new RuntimeException("Executor was closed.");
         }
@@ -99,6 +100,36 @@ public abstract class BaseExecutor implements Executor {
             transaction = null;
             // 关闭
             closed = true;
+        }
+    }
+
+
+    @Override
+    public int update(MappedStatement ms, Object parameter) throws SQLException {
+        return doUpdate(ms, parameter);
+    }
+
+    /**
+     * 更新
+     *
+     * @param ms
+     * @param parameter
+     * @return
+     * @throws SQLException
+     */
+    protected abstract int doUpdate(MappedStatement ms, Object parameter) throws SQLException;
+
+
+    /**
+     * 关闭 Statement
+     * @param statement
+     */
+    protected void closeStatement(Statement statement) {
+        if (statement != null) {
+            try {
+                statement.close();
+            } catch (SQLException ignore) {
+            }
         }
     }
 }
