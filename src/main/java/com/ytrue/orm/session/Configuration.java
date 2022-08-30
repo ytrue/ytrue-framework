@@ -14,6 +14,7 @@ import com.ytrue.orm.executor.statement.StatementHandler;
 import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.Environment;
 import com.ytrue.orm.mapping.MappedStatement;
+import com.ytrue.orm.mapping.ResultMap;
 import com.ytrue.orm.reflection.MetaObject;
 import com.ytrue.orm.reflection.factory.DefaultObjectFactory;
 import com.ytrue.orm.reflection.factory.ObjectFactory;
@@ -58,6 +59,11 @@ public class Configuration {
      */
     protected final Map<String, MappedStatement> mappedStatements = new HashMap<>();
 
+
+    /**
+     * 结果映射，存在Map里
+     */
+    protected final Map<String, ResultMap> resultMaps = new HashMap<>();
 
     /**
      * 类型别名注册机
@@ -237,4 +243,27 @@ public class Configuration {
     public LanguageDriver getDefaultScriptingLanguageInstance() {
         return languageRegistry.getDefaultDriver();
     }
+
+
+    /**
+     * 加添结果映射
+     *
+     * @param resultMap
+     */
+    public void addResultMap(ResultMap resultMap) {
+        resultMaps.put(resultMap.getId(), resultMap);
+    }
+
+
+    /**
+     * 根据id获取结果映射
+     *
+     * @param id
+     * @return
+     */
+    public ResultMap getResultMap(String id) {
+        return resultMaps.get(id);
+    }
+
+
 }

@@ -1,9 +1,6 @@
 package com.ytrue.orm.builder;
 
-import com.ytrue.orm.mapping.MappedStatement;
-import com.ytrue.orm.mapping.ResultMap;
-import com.ytrue.orm.mapping.SqlCommandType;
-import com.ytrue.orm.mapping.SqlSource;
+import com.ytrue.orm.mapping.*;
 import com.ytrue.orm.scripting.LanguageDriver;
 import com.ytrue.orm.session.Configuration;
 import lombok.Getter;
@@ -20,7 +17,7 @@ import java.util.List;
 public class MapperBuilderAssistant extends BaseBuilder {
 
 
-    private final static String STRIN_SPOT = ".";
+    private final static String STRING_SPOT = ".";
 
     /**
      * 命名空间
@@ -93,7 +90,10 @@ public class MapperBuilderAssistant extends BaseBuilder {
         List<ResultMap> resultMaps = new ArrayList<>();
 
         if (resultMap != null) {
-            // TODO：暂无Map结果映射配置，本章节不添加此逻辑
+            String[] resultMapNames = resultMap.split(",");
+            for (String resultMapName : resultMapNames) {
+                resultMaps.add(configuration.getResultMap(resultMapName.trim()));
+            }
         }
         /*
          * 通常使用 resultType 即可满足大部分场景
@@ -126,12 +126,31 @@ public class MapperBuilderAssistant extends BaseBuilder {
         }
 
         if (isReference) {
-            if (base.contains(STRIN_SPOT)) {
+            if (base.contains(STRING_SPOT)) {
                 return base;
             }
+        } else {
+            if (base.startsWith(currentNamespace + STRING_SPOT)) {
+                return base;
+            }
+            if (base.contains(STRING_SPOT)) {
+                throw new RuntimeException("Dots are not allowed in element names, please remove it from " + base);
+            }
         }
-        return currentNamespace + STRIN_SPOT + base;
+        return currentNamespace + STRING_SPOT + base;
     }
 
+
+    public ResultMap addResultMap(String id, Class<?> type, List<ResultMapping> resultMappings) {
+
+        ResultMap.Builder inlineResultMapBuilder = new ResultMap.Builder(
+                configuration,
+                id,
+                type,
+                resultMappings);
+        ResultMap resultMap = inlineResultMapBuilder.build();
+        configuration.addResultMap(resultMap);
+        return resultMap;
+    }
 
 }
