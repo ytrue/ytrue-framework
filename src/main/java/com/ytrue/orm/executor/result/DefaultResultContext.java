@@ -13,6 +13,7 @@ public class DefaultResultContext implements ResultContext {
      */
     private Object resultObject;
 
+
     /**
      * 结果个数
      */

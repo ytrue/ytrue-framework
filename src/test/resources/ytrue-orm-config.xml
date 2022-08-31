@@ -17,7 +17,8 @@
     </environments>
 
     <mappers>
-        <mapper resource="mapper/User_Mapper.xml"/>
+<!--        <mapper resource="mapper/User_Mapper.xml"/>-->
+        <mapper resource="mapper/Activity_Mapper.xml"/>
     </mappers>
 
 </configuration>

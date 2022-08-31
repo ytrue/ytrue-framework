@@ -265,7 +265,7 @@ public class MapperAnnotationBuilder {
     }
 
     /**
-     * 获取参数类型
+     * 获取参数类型，这里其实要处理的
      *
      * @param method
      * @return
@@ -282,7 +282,7 @@ public class MapperAnnotationBuilder {
                 if (parameterType == null) {
                     parameterType = clazz;
                 } else {
-                    // map类型
+                    // 有多个参数就是map类型
                     parameterType = MapperMethod.ParamMap.class;
                 }
             }

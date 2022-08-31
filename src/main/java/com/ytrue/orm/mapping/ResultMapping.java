@@ -3,7 +3,11 @@ package com.ytrue.orm.mapping;
 import com.ytrue.orm.session.Configuration;
 import com.ytrue.orm.type.JdbcType;
 import com.ytrue.orm.type.TypeHandler;
+import com.ytrue.orm.type.TypeHandlerRegistry;
 import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author ytrue
@@ -40,4 +44,46 @@ public class ResultMapping {
      */
     private TypeHandler<?> typeHandler;
 
+    /**
+     * 结构标记
+     */
+    private List<ResultFlag> flags;
+
+    public static class Builder {
+
+        private ResultMapping resultMapping = new ResultMapping();
+
+        public Builder(Configuration configuration, String property, String column, Class<?> javaType) {
+            resultMapping.configuration = configuration;
+            resultMapping.property = property;
+            resultMapping.column = column;
+            resultMapping.javaType = javaType;
+            resultMapping.flags = new ArrayList<>();
+        }
+
+        public Builder typeHandler(TypeHandler<?> typeHandler) {
+            resultMapping.typeHandler = typeHandler;
+            return this;
+        }
+
+        public Builder flags(List<ResultFlag> flags) {
+            resultMapping.flags = flags;
+            return this;
+        }
+
+        public ResultMapping build() {
+            resolveTypeHandler();
+            return resultMapping;
+        }
+
+        private void resolveTypeHandler() {
+            if (resultMapping.typeHandler == null && resultMapping.javaType != null) {
+                Configuration configuration = resultMapping.configuration;
+                TypeHandlerRegistry typeHandlerRegistry = configuration.getTypeHandlerRegistry();
+                // 获取类型处理器
+                resultMapping.typeHandler = typeHandlerRegistry.getTypeHandler(resultMapping.javaType, null);
+            }
+        }
+
+    }
 }

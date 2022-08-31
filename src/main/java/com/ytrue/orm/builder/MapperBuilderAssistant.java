@@ -1,8 +1,10 @@
 package com.ytrue.orm.builder;
 
 import com.ytrue.orm.mapping.*;
+import com.ytrue.orm.reflection.MetaClass;
 import com.ytrue.orm.scripting.LanguageDriver;
 import com.ytrue.orm.session.Configuration;
+import com.ytrue.orm.type.TypeHandler;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -58,7 +60,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
             Class<?> resultType,
             LanguageDriver lang
     ) {
-        // 给id加上namespace前缀：cn.bugstack.mybatis.test.dao.IUserDao.queryUserInfoById
+        // 给id加上namespace前缀：com.ytrue.mybatis.test.dao.IUserDao.queryUserInfoById
         id = applyCurrentNamespace(id, false);
         MappedStatement.Builder statementBuilder = new MappedStatement.Builder(configuration, id, sqlCommandType, sqlSource, resultType);
 
@@ -143,6 +145,9 @@ public class MapperBuilderAssistant extends BaseBuilder {
 
     public ResultMap addResultMap(String id, Class<?> type, List<ResultMapping> resultMappings) {
 
+        // 补全ID全路径，如：com.ytrue.orm.test.dao.IActivityDao + activityMap
+        id = applyCurrentNamespace(id, false);
+
         ResultMap.Builder inlineResultMapBuilder = new ResultMap.Builder(
                 configuration,
                 id,
@@ -152,5 +157,58 @@ public class MapperBuilderAssistant extends BaseBuilder {
         configuration.addResultMap(resultMap);
         return resultMap;
     }
+
+    /**
+     * step-13 新增方法
+     *
+     * @param resultType
+     * @param property
+     * @param column
+     * @param flags
+     * @return
+     */
+    public ResultMapping buildResultMapping(
+            Class<?> resultType,
+            String property,
+            String column,
+            List<ResultFlag> flags) {
+
+        // 获得resultType 对应字段的类型
+        Class<?> javaTypeClass = resolveResultJavaType(resultType, property, null);
+        // 获取类型处理器
+        TypeHandler<?> typeHandlerInstance = resolveTypeHandler(javaTypeClass, null);
+
+        ResultMapping.Builder builder = new ResultMapping.Builder(configuration, property, column, javaTypeClass);
+
+        builder.typeHandler(typeHandlerInstance);
+        builder.flags(flags);
+
+        return builder.build();
+    }
+
+
+    /**
+     * 获得resultType 对应字段的类型
+     * @param resultType
+     * @param property
+     * @param javaType
+     * @return
+     */
+    private Class<?> resolveResultJavaType(Class<?> resultType, String property, Class<?> javaType) {
+        if (javaType == null && property != null) {
+            try {
+                MetaClass metaResultType = MetaClass.forClass(resultType);
+                javaType = metaResultType.getSetterType(property);
+            } catch (Exception ignore) {
+            }
+        }
+        if (javaType == null) {
+            javaType = Object.class;
+        }
+        return javaType;
+    }
+
+
+
 
 }

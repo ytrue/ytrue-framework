@@ -2,6 +2,7 @@ package com.ytrue.orm.builder;
 
 import com.ytrue.orm.session.Configuration;
 import com.ytrue.orm.type.TypeAliasRegistry;
+import com.ytrue.orm.type.TypeHandler;
 import com.ytrue.orm.type.TypeHandlerRegistry;
 
 /**
@@ -26,8 +27,38 @@ public class BaseBuilder {
     }
 
 
-
     protected Class<?> resolveAlias(String alias) {
         return typeAliasRegistry.resolveAlias(alias);
+    }
+
+    /**
+     * 根据别名解析 Class 类型别名注册/事务管理器别名
+     *
+     * @param alias
+     * @return
+     */
+    protected Class<?> resolveClass(String alias) {
+        if (alias == null) {
+            return null;
+        }
+        try {
+            return resolveAlias(alias);
+        } catch (Exception e) {
+            throw new RuntimeException("Error resolving class. Cause: " + e, e);
+        }
+    }
+
+
+    /**
+     * 解析类型获取器
+     * @param javaType
+     * @param typeHandlerType
+     * @return
+     */
+    protected TypeHandler<?> resolveTypeHandler(Class<?> javaType, Class<? extends TypeHandler<?>> typeHandlerType) {
+        if (typeHandlerType == null){
+            return null;
+        }
+        return typeHandlerRegistry.getMappingTypeHandler(typeHandlerType);
     }
 }

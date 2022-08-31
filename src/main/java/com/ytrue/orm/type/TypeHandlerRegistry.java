@@ -1,6 +1,9 @@
 package com.ytrue.orm.type;
 
+import com.ytrue.orm.mapping.DateTypeHandler;
+
 import java.lang.reflect.Type;
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -38,8 +41,11 @@ public class TypeHandlerRegistry {
 
         // 处理object
         register(Object.class, new ObjectTypeHandler());
+        register(HashMapTypeHandler.class, new ObjectTypeHandler());
 
 
+        // 处理日期
+        register(Date.class, new DateTypeHandler());
     }
 
     /**
@@ -125,5 +131,10 @@ public class TypeHandlerRegistry {
         }
         // type drives generics here，这里其实可能为空的
         return (TypeHandler<T>) handler;
+    }
+
+
+    public TypeHandler<?> getMappingTypeHandler(Class<? extends TypeHandler<?>> handlerType) {
+        return ALL_TYPE_HANDLERS_MAP.get(handlerType);
     }
 }
