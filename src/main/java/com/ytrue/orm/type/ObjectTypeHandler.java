@@ -22,4 +22,9 @@ public class ObjectTypeHandler extends BaseTypeHandler<Object> {
         return rs.getObject(columnName);
     }
 
+    @Override
+    public Object getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
+        return rs.getObject(columnIndex);
+    }
+
 }

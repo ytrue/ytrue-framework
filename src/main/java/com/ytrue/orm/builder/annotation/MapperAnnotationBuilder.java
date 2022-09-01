@@ -6,6 +6,9 @@ import com.ytrue.orm.annotations.Select;
 import com.ytrue.orm.annotations.Update;
 import com.ytrue.orm.binding.MapperMethod;
 import com.ytrue.orm.builder.MapperBuilderAssistant;
+import com.ytrue.orm.executor.keygen.Jdbc3KeyGenerator;
+import com.ytrue.orm.executor.keygen.KeyGenerator;
+import com.ytrue.orm.executor.keygen.NoKeyGenerator;
 import com.ytrue.orm.mapping.SqlCommandType;
 import com.ytrue.orm.mapping.SqlSource;
 import com.ytrue.orm.scripting.LanguageDriver;
@@ -84,6 +87,18 @@ public class MapperAnnotationBuilder {
             final String mappedStatementId = type.getName() + "." + method.getName();
             // 获取SqlCommandType
             SqlCommandType sqlCommandType = getSqlCommandType(method);
+
+
+            // step-14 新增
+            KeyGenerator keyGenerator;
+            String keyProperty = "id";
+            if (SqlCommandType.INSERT.equals(sqlCommandType) || SqlCommandType.UPDATE.equals(sqlCommandType)) {
+                keyGenerator = configuration.isUseGeneratedKeys() ? new Jdbc3KeyGenerator() : new NoKeyGenerator();
+            } else {
+                keyGenerator = new NoKeyGenerator();
+            }
+
+
             // 是否是查询
             boolean isSelect = sqlCommandType == SqlCommandType.SELECT;
 
@@ -101,6 +116,8 @@ public class MapperAnnotationBuilder {
                     parameterTypeClass,
                     resultMapId,
                     getReturnType(method),
+                    keyGenerator,
+                    keyProperty,
                     languageDriver
             );
         }

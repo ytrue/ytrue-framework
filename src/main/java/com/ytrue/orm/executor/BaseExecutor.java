@@ -36,6 +36,12 @@ public abstract class BaseExecutor implements Executor {
     }
 
     @Override
+    public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler) throws SQLException {
+        BoundSql boundSql = ms.getBoundSql(parameter);
+        return query(ms, parameter, rowBounds, resultHandler, boundSql);
+    }
+
+    @Override
     public <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
         if (closed) {
             throw new RuntimeException("Executor was closed.");
@@ -55,7 +61,7 @@ public abstract class BaseExecutor implements Executor {
      * @param <E>
      * @return
      */
-    protected abstract <E> List<E> doQuery(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql);
+    protected abstract <E> List<E> doQuery(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException ;
 
 
     @Override
@@ -63,7 +69,7 @@ public abstract class BaseExecutor implements Executor {
         if (closed) {
             throw new RuntimeException("Executor was closed.");
         }
-        return null;
+        return transaction;
     }
 
     @Override

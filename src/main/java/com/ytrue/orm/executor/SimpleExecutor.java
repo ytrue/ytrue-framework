@@ -4,9 +4,9 @@ import com.ytrue.orm.executor.statement.StatementHandler;
 import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.session.Configuration;
+import com.ytrue.orm.session.ResultHandler;
 import com.ytrue.orm.session.RowBounds;
 import com.ytrue.orm.transaction.Transaction;
-import com.ytrue.orm.session.ResultHandler;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -36,19 +36,18 @@ public class SimpleExecutor extends BaseExecutor {
      * @return
      */
     @Override
-    protected <E> List<E> doQuery(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+    protected <E> List<E> doQuery(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
         Statement stmt = null;
         try {
             Configuration configuration = ms.getConfiguration();
             // 新建一个 StatementHandler
-            StatementHandler handler = configuration.newStatementHandler(this, ms, parameter, rowBounds, resultHandler, boundSql);
+            StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, resultHandler, boundSql);
             // 准备语句
             stmt = prepareStatement(handler);
             // 返回结果
             return handler.query(stmt, resultHandler);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
+        } finally {
+            closeStatement(stmt);
         }
     }
 

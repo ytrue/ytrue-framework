@@ -1,9 +1,9 @@
 package com.ytrue.orm.mapping;
 
+import com.ytrue.orm.executor.keygen.KeyGenerator;
 import com.ytrue.orm.scripting.LanguageDriver;
 import com.ytrue.orm.session.Configuration;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -54,6 +54,20 @@ public class MappedStatement {
      */
     private List<ResultMap> resultMaps;
 
+
+    /**
+     * step-14 新增
+     */
+    private KeyGenerator keyGenerator;
+    private String[] keyProperties;
+    private String[] keyColumns;
+
+    /**
+     * <Mapper resource ="resource"></>
+     */
+    private String resource;
+
+
     /**
      * step-11 新增方法
      */
@@ -88,11 +102,41 @@ public class MappedStatement {
             return mappedStatement.id;
         }
 
+
+        public Builder resource(String resource) {
+            mappedStatement.resource = resource;
+            return this;
+        }
+
+        public Builder keyGenerator(KeyGenerator keyGenerator) {
+            mappedStatement.keyGenerator = keyGenerator;
+            return this;
+        }
+
+        public Builder keyProperty(String keyProperty) {
+            mappedStatement.keyProperties = delimitedStringToArray(keyProperty);
+            return this;
+        }
+
         public Builder resultMaps(List<ResultMap> resultMaps) {
             mappedStatement.resultMaps = resultMaps;
             return this;
         }
 
+    }
+
+    /**
+     * 逗号分割字符串
+     *
+     * @param in
+     * @return
+     */
+    private static String[] delimitedStringToArray(String in) {
+        if (in == null || in.trim().length() == 0) {
+            return null;
+        } else {
+            return in.split(",");
+        }
     }
 
 

@@ -6,6 +6,7 @@ import com.ytrue.orm.datasource.pooled.PooledDataSourceFactory;
 import com.ytrue.orm.datasource.unpooled.UnpooledDataSourceFactory;
 import com.ytrue.orm.executor.Executor;
 import com.ytrue.orm.executor.SimpleExecutor;
+import com.ytrue.orm.executor.keygen.KeyGenerator;
 import com.ytrue.orm.executor.parameter.ParameterHandler;
 import com.ytrue.orm.executor.resultset.DefaultResultSetHandler;
 import com.ytrue.orm.executor.resultset.ResultSetHandler;
@@ -42,6 +43,12 @@ import java.util.Set;
  */
 public class Configuration {
 
+
+    /**
+     * 使用key生成
+     */
+    protected boolean useGeneratedKeys = false;
+
     /**
      * 环境
      */
@@ -64,6 +71,11 @@ public class Configuration {
      * 结果映射，存在Map里
      */
     protected final Map<String, ResultMap> resultMaps = new HashMap<>();
+
+    /**
+     * 主键索引
+     */
+    protected final Map<String, KeyGenerator> keyGenerators = new HashMap<>();
 
     /**
      * 类型别名注册机
@@ -265,5 +277,53 @@ public class Configuration {
         return resultMaps.get(id);
     }
 
+
+    /**
+     * 添加KeyGenerator
+     *
+     * @param id
+     * @param keyGenerator
+     */
+    public void addKeyGenerator(String id, KeyGenerator keyGenerator) {
+        keyGenerators.put(id, keyGenerator);
+    }
+
+    /**
+     * 根据id获取 KeyGenerator
+     *
+     * @param id
+     * @return
+     */
+    public KeyGenerator getKeyGenerator(String id) {
+        return keyGenerators.get(id);
+    }
+
+    /**
+     * 判断id是否存在 KeyGenerator
+     *
+     * @param id
+     * @return
+     */
+    public boolean hasKeyGenerator(String id) {
+        return keyGenerators.containsKey(id);
+    }
+
+    /**
+     * 是否使用生成key
+     *
+     * @return
+     */
+    public boolean isUseGeneratedKeys() {
+        return useGeneratedKeys;
+    }
+
+    /**
+     * 设置
+     *
+     * @param useGeneratedKeys
+     */
+    public void setUseGeneratedKeys(boolean useGeneratedKeys) {
+        this.useGeneratedKeys = useGeneratedKeys;
+    }
 
 }

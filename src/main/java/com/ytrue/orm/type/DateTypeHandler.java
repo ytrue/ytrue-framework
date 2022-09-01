@@ -1,7 +1,4 @@
-package com.ytrue.orm.mapping;
-
-import com.ytrue.orm.type.BaseTypeHandler;
-import com.ytrue.orm.type.JdbcType;
+package com.ytrue.orm.type;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -11,8 +8,8 @@ import java.util.Date;
 
 /**
  * @author ytrue
- * @date 2022/8/30 20:02
- * @description 日期类型处理器
+ * @date 2022/9/1 15:06
+ * @description DateTypeHandler
  */
 public class DateTypeHandler extends BaseTypeHandler<Date> {
 
@@ -24,6 +21,15 @@ public class DateTypeHandler extends BaseTypeHandler<Date> {
     @Override
     protected Date getNullableResult(ResultSet rs, String columnName) throws SQLException {
         Timestamp sqlTimestamp = rs.getTimestamp(columnName);
+        if (sqlTimestamp != null) {
+            return new Date(sqlTimestamp.getTime());
+        }
+        return null;
+    }
+
+    @Override
+    public Date getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
+        Timestamp sqlTimestamp = rs.getTimestamp(columnIndex);
         if (sqlTimestamp != null) {
             return new Date(sqlTimestamp.getTime());
         }

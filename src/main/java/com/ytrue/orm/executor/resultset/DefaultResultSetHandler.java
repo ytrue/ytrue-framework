@@ -229,14 +229,47 @@ public class DefaultResultSetHandler implements ResultSetHandler {
         final Class<?> resultType = resultMap.getType();
         // 构建MetaClass
         final MetaClass metaType = MetaClass.forClass(resultType);
+
+        if (typeHandlerRegistry.hasTypeHandler(resultType)) {
+            // 基本类型
+            return createPrimitiveResultObject(rsw, resultMap, columnPrefix);
+        }
         // 如果是接口 或者 有构造函数那么就可以创建这个对象
-        if (resultType.isInterface() || metaType.hasDefaultConstructor()) {
+        else if (resultType.isInterface() || metaType.hasDefaultConstructor()) {
             // 普通的Bean对象类型
             return objectFactory.create(resultType);
         }
         throw new RuntimeException("Do not know how to create an instance of " + resultType);
     }
 
+    /**
+     * 简单类型创建
+     * @param rsw
+     * @param resultMap
+     * @param columnPrefix
+     * @return
+     * @throws SQLException
+     */
+    private Object createPrimitiveResultObject(ResultSetWrapper rsw, ResultMap resultMap, String columnPrefix) throws SQLException {
+        final Class<?> resultType = resultMap.getType();
+        final String columnName;
+        if (!resultMap.getResultMappings().isEmpty()) {
+            final List<ResultMapping> resultMappingList = resultMap.getResultMappings();
+            final ResultMapping mapping = resultMappingList.get(0);
+            columnName = prependPrefix(mapping.getColumn(), columnPrefix);
+        } else {
+            columnName = rsw.getColumnNames().get(0);
+        }
+        final TypeHandler<?> typeHandler = rsw.getTypeHandler(resultType, columnName);
+        return typeHandler.getResult(rsw.getResultSet(), columnName);
+    }
+
+    private String prependPrefix(String columnName, String prefix) {
+        if (columnName == null || columnName.length() == 0 || prefix == null || prefix.length() == 0) {
+            return columnName;
+        }
+        return prefix + columnName;
+    }
 
     /**
      * Map映射：根据映射类型赋值到字段

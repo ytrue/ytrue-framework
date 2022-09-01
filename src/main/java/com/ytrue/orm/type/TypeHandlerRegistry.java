@@ -1,7 +1,5 @@
 package com.ytrue.orm.type;
 
-import com.ytrue.orm.mapping.DateTypeHandler;
-
 import java.lang.reflect.Type;
 import java.util.Date;
 import java.util.EnumMap;

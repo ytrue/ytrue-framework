@@ -20,4 +20,9 @@ public class HashMapTypeHandler extends BaseTypeHandler<HashMap<String, String>>
     protected HashMap<String, String> getNullableResult(ResultSet rs, String columnName) throws SQLException {
         return null;
     }
+ 
+    @Override
+    public HashMap<String, String> getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
+        return null;
+    }
 }
