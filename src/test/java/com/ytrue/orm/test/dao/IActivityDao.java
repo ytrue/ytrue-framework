@@ -5,7 +5,7 @@ import com.ytrue.orm.test.po.Activity;
 
 public interface IActivityDao {
 
-    Activity queryActivityById(Long activityId);
+    Activity queryActivityById(Activity activity);
 
     Integer insert(Activity activity);
 }

@@ -29,11 +29,20 @@ public class ApiTest1 {
 
     @Test
     public void test_queryActivityById() {
-        // 1. 获取映射器对象
+
+        // 2. 获取映射器对象
         IActivityDao dao = sqlSession.getMapper(IActivityDao.class);
-        // 2. 测试验证
-        Activity res = dao.queryActivityById(100001L);
+        // 3. 测试验证
+        Activity req = new Activity();
+        req.setActivityId(100001L);
+        Activity res = dao.queryActivityById(req);
         log.info("测试结果：{}", JSON.toJSONString(res));
+
+//        // 1. 获取映射器对象
+//        IActivityDao dao = sqlSession.getMapper(IActivityDao.class);
+//        // 2. 测试验证
+//        Activity res = dao.queryActivityById(100001L);
+//        log.info("测试结果：{}", JSON.toJSONString(res));
     }
 
 
