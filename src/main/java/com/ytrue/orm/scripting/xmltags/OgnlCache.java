@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 通过它简单一致的表达式语法，可以存取对象的任意属性，调用对象的方法，遍历整个对象的结构图，实现字段类型转化等功能。
  * 它使用相同的表达式去存取对象的属性。
  */
-public class OgnlCache {
+    public class OgnlCache {
 
     private static final Map<String, Object> EXPRESSION_CACHE = new ConcurrentHashMap<>();
 

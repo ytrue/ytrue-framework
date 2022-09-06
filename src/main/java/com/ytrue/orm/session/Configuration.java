@@ -16,6 +16,8 @@ import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.Environment;
 import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.mapping.ResultMap;
+import com.ytrue.orm.plugin.Interceptor;
+import com.ytrue.orm.plugin.InterceptorChain;
 import com.ytrue.orm.reflection.MetaObject;
 import com.ytrue.orm.reflection.factory.DefaultObjectFactory;
 import com.ytrue.orm.reflection.factory.ObjectFactory;
@@ -113,6 +115,12 @@ public class Configuration {
     @Getter
     protected String databaseId;
 
+    /**
+     * 插件拦截器链
+     */
+    protected final InterceptorChain interceptorChain = new InterceptorChain();
+
+
     public Configuration() {
         // 注册jdbc事务管理器
         typeAliasRegistry.registerAlias("JDBC", JdbcTransactionFactory.class);
@@ -203,7 +211,11 @@ public class Configuration {
      * 创建语句处理器
      */
     public StatementHandler newStatementHandler(Executor executor, MappedStatement mappedStatement, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
-        return new PreparedStatementHandler(executor, mappedStatement, parameter, rowBounds, resultHandler, boundSql);
+        // 创建语句处理器，Mybatis 这里加了路由 STATEMENT、PREPARED、CALLABLE 我们默认只根据预处理进行实例化
+        StatementHandler statementHandler = new PreparedStatementHandler(executor, mappedStatement, parameter, rowBounds, resultHandler, boundSql);
+        // 嵌入插件，代理对象
+        statementHandler = (StatementHandler) interceptorChain.pluginAll(statementHandler);
+        return statementHandler;
     }
 
     /**
@@ -326,4 +338,13 @@ public class Configuration {
         this.useGeneratedKeys = useGeneratedKeys;
     }
 
+
+    /**
+     * 添加拦截器
+     *
+     * @param interceptorInstance
+     */
+    public void addInterceptor(Interceptor interceptorInstance) {
+        interceptorChain.addInterceptor(interceptorInstance);
+    }
 }

@@ -1,5 +1,6 @@
 package com.ytrue.orm.executor.statement;
 
+import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.session.ResultHandler;
 
 import java.sql.Connection;
@@ -51,4 +52,11 @@ public interface StatementHandler {
      * @throws SQLException
      */
     int update(Statement statement) throws SQLException;
+
+
+    /**
+     * 获取绑定SQL
+     * @return
+     */
+    BoundSql getBoundSql();
 }

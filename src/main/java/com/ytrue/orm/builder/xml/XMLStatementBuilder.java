@@ -128,7 +128,18 @@ public class XMLStatementBuilder extends BaseBuilder {
     private void processSelectKeyNodes(String id, Class<?> parameterTypeClass, LanguageDriver langDriver) {
         List<Element> selectKeyNodes = element.elements("selectKey");
         parseSelectKeyNodes(id, selectKeyNodes, parameterTypeClass, langDriver);
+
+        // 删除掉节点
+        removeSelectKeyNodes(selectKeyNodes);
     }
+
+    private void removeSelectKeyNodes(List<Element> selectKeyNodes) {
+        for (Element nodeToHandle : selectKeyNodes) {
+            nodeToHandle.getParent().remove(nodeToHandle);
+        }
+    }
+
+
 
     private void parseSelectKeyNodes(String parentId, List<Element> list, Class<?> parameterTypeClass, LanguageDriver languageDriver) {
         for (Element nodeToHandle : list) {

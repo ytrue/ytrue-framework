@@ -3,10 +3,8 @@ package com.ytrue.orm.builder.xml;
 import com.ytrue.orm.builder.BaseBuilder;
 import com.ytrue.orm.datasource.DataSourceFactory;
 import com.ytrue.orm.io.Resources;
-import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.Environment;
-import com.ytrue.orm.mapping.MappedStatement;
-import com.ytrue.orm.mapping.SqlCommandType;
+import com.ytrue.orm.plugin.Interceptor;
 import com.ytrue.orm.session.Configuration;
 import com.ytrue.orm.transaction.TransactionFactory;
 import org.dom4j.Document;
@@ -18,9 +16,8 @@ import org.xml.sax.InputSource;
 import javax.sql.DataSource;
 import java.io.InputStream;
 import java.io.Reader;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * @author ytrue
@@ -61,6 +58,8 @@ public class XMLConfigBuilder extends BaseBuilder {
      */
     public Configuration parse() {
         try {
+            // 插件 step-16 添加
+            pluginElement(root.element("plugins"));
             // 获取 xml下面的 environments元素，解析
             environmentsElement(root.element("environments"));
             // 获取 xml下面的 mappers元素，解析
@@ -73,7 +72,53 @@ public class XMLConfigBuilder extends BaseBuilder {
 
 
     /**
+     * Mybatis 允许你在某一点切入映射语句执行的调度
+     * <plugins>
+     * <plugin interceptor="cn.bugstack.mybatis.test.plugin.TestPlugin">
+     * <property name="test00" value="100"/>
+     * <property name="test01" value="100"/>
+     * </plugin>
+     * </plugins>
+     */
+    private void pluginElement(Element parent) throws Exception {
+        if (parent == null) {
+            return;
+        }
+        List<Element> elements = parent.elements();
+
+        for (Element element : elements) {
+            String interceptor = element.attributeValue("interceptor");
+            // 参数配置
+            Properties properties = new Properties();
+            List<Element> propertyElementList = element.elements("property");
+            for (Element property : propertyElementList) {
+                properties.setProperty(property.attributeValue("name"), property.attributeValue("value"));
+            }
+
+            // 获取插件实现类并实例化：com.ytrue.orm.test.plugin.TestPlugin
+            Interceptor interceptorInstance = (Interceptor) resolveClass(interceptor).newInstance();
+            interceptorInstance.setProperties(properties);
+            configuration.addInterceptor(interceptorInstance);
+        }
+    }
+
+
+    /**
      * 解析environments标签
+     *
+     * <environments default="development">
+     * <environment id="development">
+     * <transactionManager type="JDBC">
+     * <property name="..." value="..."/>
+     * </transactionManager>
+     * <dataSource type="POOLED">
+     * <property name="driver" value="${driver}"/>
+     * <property name="url" value="${url}"/>
+     * <property name="username" value="${username}"/>
+     * <property name="password" value="${password}"/>
+     * </dataSource>
+     * </environment>
+     * </environments>
      *
      * @param context
      * @throws Exception

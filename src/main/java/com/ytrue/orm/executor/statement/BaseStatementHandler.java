@@ -20,6 +20,7 @@ import java.sql.Statement;
  * @description BaseStatementHandler
  */
 public abstract class BaseStatementHandler implements StatementHandler {
+
     protected final Configuration configuration;
     protected final Executor executor;
     protected final MappedStatement mappedStatement;
@@ -80,5 +81,11 @@ public abstract class BaseStatementHandler implements StatementHandler {
     protected void generateKeys(Object parameter) {
         KeyGenerator keyGenerator = mappedStatement.getKeyGenerator();
         keyGenerator.processBefore(executor, mappedStatement, null, parameter);
+    }
+
+
+    @Override
+    public BoundSql getBoundSql() {
+        return boundSql;
     }
 }
