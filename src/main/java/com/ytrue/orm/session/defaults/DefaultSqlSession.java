@@ -51,7 +51,7 @@ public class DefaultSqlSession implements SqlSession {
         log.debug("执行查询 statement：{} parameter：{}", statement, JSON.toJSONString(parameter));
         MappedStatement ms = configuration.getMappedStatement(statement);
         try {
-            return executor.query(ms, parameter, RowBounds.DEFAULT, Executor.NO_RESULT_HANDLER, ms.getSqlSource().getBoundSql(parameter));
+            return executor.query(ms, parameter, RowBounds.DEFAULT, Executor.NO_RESULT_HANDLER);
         } catch (SQLException e) {
             throw new RuntimeException("Error querying database.  Cause: " + e);
         }
@@ -85,6 +85,16 @@ public class DefaultSqlSession implements SqlSession {
         } catch (SQLException e) {
             throw new RuntimeException("Error committing transaction.  Cause: " + e);
         }
+    }
+
+    @Override
+    public void close() {
+        executor.close(true);
+    }
+
+    @Override
+    public void clearCache() {
+        executor.clearLocalCache();
     }
 
     /**

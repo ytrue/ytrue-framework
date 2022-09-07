@@ -54,6 +54,7 @@ public class MappedStatement {
      */
     private List<ResultMap> resultMaps;
 
+    private boolean flushCacheRequired;
 
     /**
      * step-14 新增
@@ -66,6 +67,7 @@ public class MappedStatement {
      * <Mapper resource ="resource"></>
      */
     private String resource;
+
 
 
     /**
@@ -139,5 +141,8 @@ public class MappedStatement {
         }
     }
 
+    public boolean isFlushCacheRequired() {
+        return flushCacheRequired;
+    }
 
 }

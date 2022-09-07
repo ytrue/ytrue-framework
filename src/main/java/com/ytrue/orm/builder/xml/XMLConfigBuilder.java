@@ -6,6 +6,7 @@ import com.ytrue.orm.io.Resources;
 import com.ytrue.orm.mapping.Environment;
 import com.ytrue.orm.plugin.Interceptor;
 import com.ytrue.orm.session.Configuration;
+import com.ytrue.orm.session.LocalCacheScope;
 import com.ytrue.orm.transaction.TransactionFactory;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -60,6 +61,8 @@ public class XMLConfigBuilder extends BaseBuilder {
         try {
             // 插件 step-16 添加
             pluginElement(root.element("plugins"));
+            // 设置
+            settingsElement(root.element("settings"));
             // 获取 xml下面的 environments元素，解析
             environmentsElement(root.element("environments"));
             // 获取 xml下面的 mappers元素，解析
@@ -70,6 +73,24 @@ public class XMLConfigBuilder extends BaseBuilder {
         return configuration;
     }
 
+    /**
+     * <settings>
+     * <!--缓存级别：SESSION/STATEMENT-->
+     * <setting name="localCacheScope" value="SESSION"/>
+     * </settings>
+     */
+    private void settingsElement(Element context) {
+        if (context == null) {
+            return;
+        }
+        List<Element> elements = context.elements();
+        Properties props = new Properties();
+        for (Element element : elements) {
+            props.setProperty(element.attributeValue("name"), element.attributeValue("value"));
+        }
+        // 设置缓存的类型
+        configuration.setLocalCacheScope(LocalCacheScope.valueOf(props.getProperty("localCacheScope")));
+    }
 
     /**
      * Mybatis 允许你在某一点切入映射语句执行的调度

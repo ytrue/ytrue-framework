@@ -120,6 +120,13 @@ public class Configuration {
      */
     protected final InterceptorChain interceptorChain = new InterceptorChain();
 
+    /**
+     * 缓存机制，默认不配置的情况是 SESSION
+     */
+    @Setter
+    @Getter
+    protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;
+
 
     public Configuration() {
         // 注册jdbc事务管理器

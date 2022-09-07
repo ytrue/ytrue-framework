@@ -5,6 +5,11 @@
 <configuration>
 
 
+    <settings>
+        <!--缓存级别：SESSION/STATEMENT-->
+        <setting name="localCacheScope" value="SESSION"/>
+    </settings>
+
     <plugins>
         <plugin interceptor="com.ytrue.orm.test.plugin.TestPlugin">
             <property name="test00" value="100"/>

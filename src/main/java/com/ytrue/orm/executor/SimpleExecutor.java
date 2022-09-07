@@ -1,5 +1,6 @@
 package com.ytrue.orm.executor;
 
+import com.ytrue.orm.cache.CacheKey;
 import com.ytrue.orm.executor.statement.StatementHandler;
 import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.MappedStatement;

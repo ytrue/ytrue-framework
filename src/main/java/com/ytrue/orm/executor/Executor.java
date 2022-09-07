@@ -1,5 +1,6 @@
 package com.ytrue.orm.executor;
 
+import com.ytrue.orm.cache.CacheKey;
 import com.ytrue.orm.mapping.BoundSql;
 import com.ytrue.orm.mapping.MappedStatement;
 import com.ytrue.orm.session.ResultHandler;
@@ -20,7 +21,7 @@ public interface Executor {
     ResultHandler NO_RESULT_HANDLER = null;
 
     /**
-     * 查询
+     * 查询，含缓存
      *
      * @param ms
      * @param parameter
@@ -31,8 +32,18 @@ public interface Executor {
      * @return
      * @throws SQLException
      */
-    <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException;
+    <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, CacheKey key, BoundSql boundSql) throws SQLException;
 
+    /**
+     * 查询
+     * @param ms
+     * @param parameter
+     * @param rowBounds
+     * @param resultHandler
+     * @param <E>
+     * @return
+     * @throws SQLException
+     */
     <E> List<E> query(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler) throws SQLException;
 
     /**
@@ -74,4 +85,22 @@ public interface Executor {
      * @param forceRollback
      */
     void close(boolean forceRollback);
+
+
+    /**
+     * 清理Session缓存
+     */
+    void clearLocalCache();
+
+    /**
+     * 创建缓存 Key
+     *
+     * @param ms
+     * @param parameterObject
+     * @param rowBounds
+     * @param boundSql
+     * @return
+     */
+    CacheKey createCacheKey(MappedStatement ms, Object parameterObject, RowBounds rowBounds, BoundSql boundSql);
+
 }

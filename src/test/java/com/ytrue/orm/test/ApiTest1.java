@@ -47,17 +47,21 @@ public class ApiTest1 {
 
         // 2. 获取映射器对象
         IActivityDao dao = sqlSession.getMapper(IActivityDao.class);
+
         // 3. 测试验证
         Activity req = new Activity();
         req.setActivityId(100001L);
-        Activity res = dao.queryActivityById(req);
-        log.info("测试结果：{}", JSON.toJSONString(res));
 
-//        // 1. 获取映射器对象
-//        IActivityDao dao = sqlSession.getMapper(IActivityDao.class);
-//        // 2. 测试验证
-//        Activity res = dao.queryActivityById(100001L);
-//        log.info("测试结果：{}", JSON.toJSONString(res));
+        log.info("测试结果：{}", JSON.toJSONString(dao.queryActivityById(req)));
+
+//         sqlSession.commit();
+        // sqlSession.clearCache();
+//         sqlSession.close();
+
+        log.info("测试结果：{}", JSON.toJSONString(dao.queryActivityById(req)));
+
+
+
     }
 
 
