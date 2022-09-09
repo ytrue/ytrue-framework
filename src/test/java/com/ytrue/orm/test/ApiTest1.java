@@ -16,6 +16,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.util.Map;
 
 @Slf4j
@@ -41,6 +42,36 @@ public class ApiTest1 {
 
         System.out.println(Ognl.getValue("activityId!=null", context, activity));
     }
+
+
+
+    @Test
+    public void test_queryActivityById1() throws IOException {
+        // 1. 从SqlSessionFactory中获取SqlSession
+        SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(Resources.getResourceAsReader("ytrue-orm-config.xml"));
+
+
+        // 2. 请求对象
+        Activity req = new Activity();
+        req.setActivityId(100001L);
+
+        // 3. 第一组：SqlSession
+        // 3.1 开启 Session
+        SqlSession sqlSession01 = sqlSessionFactory.openSession();
+        // 3.2 获取映射器对象
+        IActivityDao dao01 = sqlSession01.getMapper(IActivityDao.class);
+        log.info("测试结果01：{}", JSON.toJSONString(dao01.queryActivityById(req)));
+        sqlSession01.close();
+
+        // 4. 第一组：SqlSession
+        // 4.1 开启 Session
+        SqlSession sqlSession02 = sqlSessionFactory.openSession();
+        // 4.2 获取映射器对象
+        IActivityDao dao02 = sqlSession02.getMapper(IActivityDao.class);
+        log.info("测试结果02：{}", JSON.toJSONString(dao02.queryActivityById(req)));
+        sqlSession02.close();
+    }
+
 
     @Test
     public void test_queryActivityById() {

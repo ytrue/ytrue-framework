@@ -89,7 +89,7 @@ public class DefaultSqlSession implements SqlSession {
 
     @Override
     public void close() {
-        executor.close(true);
+        executor.close(false);
     }
 
     @Override

@@ -21,13 +21,13 @@ public class TestPlugin implements Interceptor {
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
-        // 获取StatementHandler
+       /* // 获取StatementHandler
         StatementHandler statementHandler = (StatementHandler) invocation.getTarget();
         // 获取SQL信息
         BoundSql boundSql = statementHandler.getBoundSql();
         String sql = boundSql.getSql();
         // 输出SQL
-        System.out.println("拦截SQL：" + sql);
+        System.out.println("拦截SQL：" + sql);*/
         // 放行
         return invocation.proceed();
     }

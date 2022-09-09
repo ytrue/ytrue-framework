@@ -27,6 +27,7 @@ public interface Executor {
      * @param parameter
      * @param rowBounds
      * @param resultHandler
+     * @param key
      * @param boundSql
      * @param <E>
      * @return
@@ -36,6 +37,7 @@ public interface Executor {
 
     /**
      * 查询
+     *
      * @param ms
      * @param parameter
      * @param rowBounds
@@ -103,4 +105,11 @@ public interface Executor {
      */
     CacheKey createCacheKey(MappedStatement ms, Object parameterObject, RowBounds rowBounds, BoundSql boundSql);
 
+
+    /**
+     * 设置 ExecutorWrapper
+     *
+     * @param executor
+     */
+    void setExecutorWrapper(Executor executor);
 }

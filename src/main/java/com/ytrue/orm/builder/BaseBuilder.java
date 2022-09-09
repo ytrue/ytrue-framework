@@ -61,4 +61,8 @@ public class BaseBuilder {
         }
         return typeHandlerRegistry.getMappingTypeHandler(typeHandlerType);
     }
+
+    protected Boolean booleanValueOf(String value, Boolean defaultValue) {
+        return value == null ? defaultValue : Boolean.valueOf(value);
+    }
 }

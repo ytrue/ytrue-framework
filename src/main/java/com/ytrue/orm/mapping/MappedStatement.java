@@ -1,5 +1,6 @@
 package com.ytrue.orm.mapping;
 
+import com.ytrue.orm.cache.Cache;
 import com.ytrue.orm.executor.keygen.KeyGenerator;
 import com.ytrue.orm.scripting.LanguageDriver;
 import com.ytrue.orm.session.Configuration;
@@ -54,7 +55,6 @@ public class MappedStatement {
      */
     private List<ResultMap> resultMaps;
 
-    private boolean flushCacheRequired;
 
     /**
      * step-14 新增
@@ -68,6 +68,21 @@ public class MappedStatement {
      */
     private String resource;
 
+
+    /**
+     * 是否清空缓存
+     */
+    private boolean flushCacheRequired;
+
+    /**
+     * 缓存
+     */
+    private Cache cache;
+
+    /**
+     * 使用缓存
+     */
+    private boolean useCache;
 
 
     /**
@@ -125,6 +140,20 @@ public class MappedStatement {
             return this;
         }
 
+        public Builder cache(Cache cache) {
+            mappedStatement.cache = cache;
+            return this;
+        }
+
+        public Builder flushCacheRequired(boolean flushCacheRequired) {
+            mappedStatement.flushCacheRequired = flushCacheRequired;
+            return this;
+        }
+
+        public Builder useCache(boolean useCache) {
+            mappedStatement.useCache = useCache;
+            return this;
+        }
     }
 
     /**

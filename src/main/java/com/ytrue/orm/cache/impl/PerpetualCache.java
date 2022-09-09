@@ -1,6 +1,5 @@
 package com.ytrue.orm.cache.impl;
 
-import com.alibaba.fastjson.JSON;
 import com.ytrue.orm.cache.Cache;
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,11 +37,7 @@ public class PerpetualCache implements Cache {
 
     @Override
     public Object getObject(Object key) {
-        Object obj = cache.get(key);
-        if (null != obj) {
-            log.info("一级缓存 \r\nkey：{} \r\nval：{}", key, JSON.toJSONString(obj));
-        }
-        return obj;
+        return cache.get(key);
     }
 
     @Override
