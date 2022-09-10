@@ -24,7 +24,7 @@ import java.util.List;
 public class ApiTest {
 
 
-
+/*
     private SqlSession sqlSession;
 
     @Before
@@ -106,5 +106,5 @@ public class ApiTest {
         // 2. 测试验证：对象参数
         List<User> users = userDao.queryUserInfoList();
         log.info("测试结果：{}", JSON.toJSONString(users));
-    }
+    }*/
 }
