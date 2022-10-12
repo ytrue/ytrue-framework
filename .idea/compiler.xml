@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <bytecodeTargetLevel target="8" />
+  </component>
+  <component name="TypeScriptCompiler">
+    <option name="nodeInterpreterTextField" value="node" />
+    <option name="recompileOnChanges" value="true" />
+    <option name="typeScriptServiceDirectory" value="D:/node/node_global/node_modules/typescript" />
+    <option name="versionType" value="SERVICE_DIRECTORY" />
+  </component>
+</project>
