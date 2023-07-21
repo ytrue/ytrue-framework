@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+	         http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+
+    <!-- AOP 配置，验证三级缓存 -->
+    <bean class="com.ytrue.ioc.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"/>
+    <!-- 类型转换器-->
+    <bean id="conversionService" class="com.ytrue.ioc.context.support.ConversionServiceFactoryBean">
+        <property name="converters" ref="converters"/>
+    </bean>
+
+
+    <bean id="husband" class="com.ytrue.ioc.test.bean.Husband">
+        <property name="wifiName" value="你猜"/>
+        <property name="marriageDate" value="2021-08-08"/>
+    </bean>
+
+    <bean id="converters" class="com.ytrue.ioc.test.ConvertersFactoryBean"/>
+
+
+</beans>
