@@ -55,6 +55,10 @@ public class DefaultThreadFactory implements ThreadFactory {
         this(poolType, false, Thread.NORM_PRIORITY);
     }
 
+    public DefaultThreadFactory(Class<?> poolType, int priority) {
+        this(poolType, false, priority);
+    }
+
     public DefaultThreadFactory(Class<?> poolType, boolean daemon, int priority) {
         this(toPoolName(poolType), daemon, priority);
     }

@@ -1,15 +1,15 @@
 package com.ytrue.netty.channel;
 
 import com.ytrue.netty.channel.nio.NioEventLoop;
-import com.ytrue.netty.util.concurrent.DefaultThreadFactory;
+import com.ytrue.netty.util.concurrent.RejectedExecutionHandler;
 import com.ytrue.netty.util.concurrent.SingleThreadEventExecutor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Queue;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadFactory;
 
 /**
  * @author ytrue
@@ -17,19 +17,38 @@ import java.util.concurrent.ThreadFactory;
  * @description 单线程事件循环，只要在netty中见到eventLoop，就可以把该类视为线程类
  */
 @Slf4j
-public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor {
+public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor implements EventLoop {
 
 
     /**
-     * @param executor     执行器
-     * @param queueFactory 队列工厂
+     * 任务队列的容量，默认是Integer的最大值
      */
-    protected SingleThreadEventLoop(Executor executor, EventLoopTaskQueueFactory queueFactory) {
-        super(executor, queueFactory, new DefaultThreadFactory());
+    protected static final int DEFAULT_MAX_PENDING_TASKS = Integer.MAX_VALUE;
+
+
+    protected SingleThreadEventLoop(
+            EventLoopGroup parent,
+            Executor executor,
+            boolean addTaskWakesUp,
+            Queue<Runnable> taskQueue,
+            Queue<Runnable> tailTaskQueue,
+            RejectedExecutionHandler rejectedExecutionHandler
+    ) {
+        super(parent, executor, addTaskWakesUp, taskQueue, rejectedExecutionHandler);
     }
 
-    protected SingleThreadEventLoop(Executor executor, EventLoopTaskQueueFactory queueFactory, ThreadFactory threadFactory) {
-        super(executor, queueFactory, threadFactory);
+    /**
+     * @Author: ytrue
+     * @Description:下面这两个方法会出现在这里，但并不是在这里实现的
+     */
+    @Override
+    public EventLoopGroup parent() {
+        return null;
+    }
+
+    @Override
+    public EventLoop next() {
+        return this;
     }
 
 

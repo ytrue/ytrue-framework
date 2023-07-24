@@ -1,13 +1,13 @@
 package com.ytrue.netty.util.concurrent;
 
-import com.ytrue.netty.channel.EventLoopTaskQueueFactory;
+import com.ytrue.netty.util.internal.ObjectUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * 既然是执行器(虽然该执行器中只有一个无限循环的线程工作)，但执行器应该具备的属性也不可少，比如任务队列，拒绝策略等等
  */
 @Slf4j
-public abstract class SingleThreadEventExecutor implements Executor {
+public abstract class SingleThreadEventExecutor implements EventExecutor {
 
 
     /**
@@ -63,6 +63,16 @@ public abstract class SingleThreadEventExecutor implements Executor {
     private Executor executor;
 
     /**
+     * 所属的执行组
+     */
+    private EventExecutorGroup parent;
+
+    /**
+     * 添加任务唤醒
+     */
+    private boolean addTaskWakesUp;
+
+    /**
      * 是否打断
      */
     private volatile boolean interrupted;
@@ -73,24 +83,27 @@ public abstract class SingleThreadEventExecutor implements Executor {
      */
     private final RejectedExecutionHandler rejectedExecutionHandler;
 
+
     /**
-     * @param executor      执行器
-     * @param queueFactory  队列工厂
-     * @param threadFactory 线程工厂
+     * @param parent          执行器组
+     * @param executor        执行器
+     * @param addTaskWakesUp  添加任务唤醒
+     * @param taskQueue       任务队列
+     * @param rejectedHandler 拒绝策略
      */
-    protected SingleThreadEventExecutor(Executor executor, EventLoopTaskQueueFactory queueFactory, ThreadFactory threadFactory) {
-        this(executor, queueFactory, threadFactory, RejectedExecutionHandlers.reject());
-    }
-
-
-    protected SingleThreadEventExecutor(Executor executor, EventLoopTaskQueueFactory queueFactory, ThreadFactory threadFactory, RejectedExecutionHandler rejectedExecutionHandler) {
-        if (executor == null) {
-            this.executor = new ThreadPerTaskExecutor(threadFactory);
-        }
-        // 创建队列
-        this.taskQueue = queueFactory == null ? newTaskQueue(DEFAULT_MAX_PENDING_TASKS) : queueFactory.newTaskQueue(DEFAULT_MAX_PENDING_TASKS);
-        // 赋值拒绝策略
-        this.rejectedExecutionHandler = rejectedExecutionHandler;
+    protected SingleThreadEventExecutor(
+            EventExecutorGroup parent,
+            Executor executor,
+            boolean addTaskWakesUp,
+            Queue<Runnable> taskQueue,
+            RejectedExecutionHandler rejectedHandler
+    ) {
+        //暂时在这里赋值
+        this.parent = parent;
+        this.addTaskWakesUp = addTaskWakesUp;
+        this.executor = executor;
+        this.taskQueue = ObjectUtil.checkNotNull(taskQueue, "taskQueue");
+        rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
     }
 
 
@@ -129,7 +142,6 @@ public abstract class SingleThreadEventExecutor implements Executor {
         if (state == ST_NOT_STARTED) {
             if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_STARTED)) {
                 boolean success = false;
-
                 try {
                     doStartThread();
                     success = true;
@@ -244,6 +256,7 @@ public abstract class SingleThreadEventExecutor implements Executor {
         if (task == null) {
             throw new NullPointerException("task is null");
         }
+        // 触发拒绝策略
         if (!offerTask(task)) {
             reject(task);
         }
@@ -295,4 +308,20 @@ public abstract class SingleThreadEventExecutor implements Executor {
         }
     }
 
+
+
+    @Override
+    public void shutdownGracefully() {
+
+    }
+
+    @Override
+    public boolean isTerminated() {
+        return false;
+    }
+
+    @Override
+    public void awaitTermination(Integer integer, TimeUnit timeUnit) throws InterruptedException{
+
+    }
 }

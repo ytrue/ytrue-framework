@@ -1,7 +1,11 @@
 package com.ytrue.netty.channel.nio;
 
+import com.ytrue.netty.channel.EventLoopGroup;
 import com.ytrue.netty.channel.EventLoopTaskQueueFactory;
+import com.ytrue.netty.channel.SelectStrategy;
 import com.ytrue.netty.channel.SingleThreadEventLoop;
+import com.ytrue.netty.util.concurrent.RejectedExecutionHandler;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -12,8 +16,10 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Iterator;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * @author ytrue
@@ -24,19 +30,37 @@ import java.util.concurrent.Executor;
 public class NioEventLoop extends SingleThreadEventLoop {
 
 
-    private final ServerSocketChannel serverSocketChannel;
-
-    private final SocketChannel socketChannel;
+    /**
+     * @Author: ytrue
+     * @Description:这个属性是暂时的
+     */
+    @Setter
+    private EventLoopGroup workerGroup;
 
     /**
-     * @Author: PP-jessica
-     * @Description:这个属性是暂时的，后面我们会把它从该类中剔除
+     * 索引
      */
-    private NioEventLoop worker;
+    private static int index = 0;
 
-    public void setWorker(NioEventLoop worker) {
-        this.worker = worker;
-    }
+    /**
+     * id值
+     */
+    private int id = 0;
+
+
+    /**
+     * 选择策略
+     */
+    private SelectStrategy selectStrategy;
+
+    /**
+     * 下面是与nio相关的组件
+     */
+    @Setter
+    private ServerSocketChannel serverSocketChannel;
+
+    @Setter
+    private SocketChannel socketChannel;
 
     private final Selector selector;
 
@@ -44,36 +68,44 @@ public class NioEventLoop extends SingleThreadEventLoop {
 
 
     /**
-     * @param serverSocketChannel 服务端ServerSocketChannel
-     * @param socketChannel       客户端SocketChannel
+     * @param parent                   父亲
+     * @param executor                 执行器
+     * @param selectorProvider         nio selectorProvider
+     * @param strategy                 选择策略
+     * @param rejectedExecutionHandler 拒绝策略
+     * @param queueFactory             队列
      */
-    public NioEventLoop(ServerSocketChannel serverSocketChannel, SocketChannel socketChannel) {
-        this(null, SelectorProvider.provider(), null, serverSocketChannel, socketChannel);
-    }
+    NioEventLoop(
+            NioEventLoopGroup parent,
+            Executor executor,
+            SelectorProvider selectorProvider,
+            SelectStrategy strategy,
+            RejectedExecutionHandler rejectedExecutionHandler,
+            EventLoopTaskQueueFactory queueFactory
+    ) {
+        super(
+                parent,
+                executor,
+                false,
+                newTaskQueue(queueFactory),
+                newTaskQueue(queueFactory),
+                rejectedExecutionHandler
+        );
 
-
-    /**
-     * @param executor            执行器
-     * @param selectorProvider    selectorProvider
-     * @param queueFactory        队列工厂
-     * @param serverSocketChannel 服务端ServerSocketChannel
-     * @param socketChannel       客户端SocketChannel
-     */
-    public NioEventLoop(Executor executor, SelectorProvider selectorProvider, EventLoopTaskQueueFactory queueFactory, ServerSocketChannel serverSocketChannel, SocketChannel socketChannel) {
-
-        super(executor, queueFactory);
-
+        // 空校验
         if (selectorProvider == null) {
             throw new NullPointerException("selectorProvider");
         }
-        if (serverSocketChannel != null && socketChannel != null) {
-            throw new RuntimeException("only one channel can be here! server or client!");
+        if (strategy == null) {
+            throw new NullPointerException("selectStrategy");
         }
 
-        this.provider = selectorProvider;
-        this.serverSocketChannel = serverSocketChannel;
-        this.socketChannel = socketChannel;
-        this.selector = openSelector();
+        provider = selectorProvider;
+        selector = openSelector();
+        selectStrategy = strategy;
+        log.info("我是" + ++index + "NioEventLoop");
+        id = index;
+        log.info("work" + id);
     }
 
 
@@ -133,6 +165,12 @@ public class NioEventLoop extends SingleThreadEventLoop {
     }
 
 
+    /**
+     * 此时，应该也可以意识到，在不参考netty源码的情况下编写该方法，直接传入serverSocketChannel或者
+     * socketChannel参数，每一次都要做几步判断，因为单线程的执行器是客户端和服务端通用的，所以你不知道传进来的参数究竟是
+     * 什么类型的channel，那么复杂的判断就必不可少了，代码也就变得丑陋。这种情况，实际上应该想到完美的解决方法了，
+     * 就是使用反射，传入Class，用工厂反射创建对象。netty中就是这么做的。
+     */
     private void processSelectedKey(SelectionKey k) throws Exception {
 
         //说明传进来的是客户端channel，要处理客户端的事件
@@ -165,8 +203,17 @@ public class NioEventLoop extends SingleThreadEventLoop {
             if (k.isAcceptable()) {
                 SocketChannel socketChannel = serverSocketChannel.accept();
                 socketChannel.configureBlocking(false);
-                //由worker执行器去执行注册
-                worker.registerRead(socketChannel, worker);
+
+                //注册客户端的channel到多路复用器，这里的操作是由服务器的单线程执行器执行的，在netty源码中，这里注册
+                //客户端channel到多路复用器是由workGroup管理的线程执行器完成的。
+
+                NioEventLoop nioEventLoop = (NioEventLoop) workerGroup.next().next();
+                nioEventLoop.setServerSocketChannel(serverSocketChannel);
+                log.info("+++++++++++++++++++++++++++++++++++++++++++要注册到第" + nioEventLoop.id + "work上！");
+                //work线程自己注册的channel到执行器
+                nioEventLoop.registerRead(socketChannel, nioEventLoop);
+
+
                 socketChannel.write(ByteBuffer.wrap("我还不是netty，但我知道你上线了".getBytes()));
                 log.info("服务器发送消息成功！");
             }
@@ -174,17 +221,22 @@ public class NioEventLoop extends SingleThreadEventLoop {
             //如果是读事件
             if (k.isReadable()) {
                 SocketChannel channel = (SocketChannel) k.channel();
-                ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
-                int len = channel.read(byteBuffer);
-                if (len == -1) {
-                    log.info("客户端通道要关闭！");
+                try {
+                    ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+                    int len = channel.read(byteBuffer);
+                    if (len == -1) {
+                        log.info("客户端通道要关闭！");
+                        channel.close();
+                        return;
+                    }
+                    byte[] bytes = new byte[len];
+                    byteBuffer.flip();
+                    byteBuffer.get(bytes);
+                    log.info("收到客户端发送的数据:{}", new String(bytes));
+                } catch (Exception e) {
+                    e.printStackTrace();
                     channel.close();
-                    return;
                 }
-                byte[] bytes = new byte[len];
-                byteBuffer.flip();
-                byteBuffer.get(bytes);
-                log.info("收到客户端发送的数据:{}", new String(bytes));
             }
         }
     }
@@ -206,5 +258,20 @@ public class NioEventLoop extends SingleThreadEventLoop {
             throw new RuntimeException(e);
         }
     }
+
+
+    /**
+     * 创建队列
+     *
+     * @param queueFactory
+     * @return
+     */
+    private static Queue<Runnable> newTaskQueue(EventLoopTaskQueueFactory queueFactory) {
+        if (queueFactory == null) {
+            return new LinkedBlockingQueue<>(DEFAULT_MAX_PENDING_TASKS);
+        }
+        return queueFactory.newTaskQueue(DEFAULT_MAX_PENDING_TASKS);
+    }
+
 
 }

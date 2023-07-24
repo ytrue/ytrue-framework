@@ -1,7 +1,7 @@
 package com.ytrue.netty.bootstrap;
 
+import com.ytrue.netty.channel.EventLoopGroup;
 import com.ytrue.netty.channel.nio.NioEventLoop;
-import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,8 +22,10 @@ public class Bootstrap {
 
     private SocketChannel socketChannel;
 
-    public Bootstrap nioEventLoop(NioEventLoop nioEventLoop) {
-        this.nioEventLoop = nioEventLoop;
+    private EventLoopGroup workerGroup;
+
+    public Bootstrap group(EventLoopGroup childGroup) {
+        this.workerGroup = childGroup;
         return this;
     }
 
@@ -42,8 +44,11 @@ public class Bootstrap {
     }
 
     private void doConnect(SocketAddress localAddress) {
+        //获得单线程执行器
+        nioEventLoop = (NioEventLoop) workerGroup.next().next();
+        nioEventLoop.setSocketChannel(socketChannel);
         //注册任务先提交
-        nioEventLoop.register(socketChannel, this.nioEventLoop);
+        nioEventLoop.register(socketChannel, nioEventLoop);
         //然后再提交连接服务器任务
         doConnect0(localAddress);
     }
@@ -52,6 +57,7 @@ public class Bootstrap {
         nioEventLoop.execute(() -> {
             try {
                 socketChannel.connect(localAddress);
+                log.info("客户端channel连接服务器成功了");
             } catch (Exception e) {
                 log.error(e.getMessage());
             }

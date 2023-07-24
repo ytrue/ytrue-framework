@@ -1,7 +1,7 @@
 package com.ytrue.netty.bootstrap;
 
+import com.ytrue.netty.channel.EventLoopGroup;
 import com.ytrue.netty.channel.nio.NioEventLoop;
-import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,13 +18,20 @@ import java.nio.channels.ServerSocketChannel;
 @NoArgsConstructor
 public class ServerBootstrap {
 
+
+    private EventLoopGroup bossGroup;
+
+    private EventLoopGroup workerGroup;
+
+
     private NioEventLoop nioEventLoop;
 
     private ServerSocketChannel serverSocketChannel;
 
 
-    public ServerBootstrap nioEventLoop(NioEventLoop nioEventLoop) {
-        this.nioEventLoop = nioEventLoop;
+    public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
+        this.bossGroup = parentGroup;
+        this.workerGroup = childGroup;
         return this;
     }
 
@@ -42,7 +49,13 @@ public class ServerBootstrap {
     }
 
     private void doBind(SocketAddress localAddress) {
-        nioEventLoop.register(serverSocketChannel, this.nioEventLoop);
+        //得到boss事件循环组中的事件执行器，也就是单线程执行器,这个里面其实就包含一个单线程执行器，在workergroup中才包含多个单线程执行器
+        //这里就暂时先写死了
+        nioEventLoop = (NioEventLoop) bossGroup.next().next();
+        nioEventLoop.setServerSocketChannel(serverSocketChannel);
+        nioEventLoop.setWorkerGroup(workerGroup);
+        //直接使用nioeventloop把服务端的channel注册到单线程执行器上
+        nioEventLoop.register(serverSocketChannel, nioEventLoop);
         doBind0(localAddress);
     }
 
