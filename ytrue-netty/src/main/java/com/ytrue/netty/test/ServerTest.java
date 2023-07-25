@@ -16,7 +16,7 @@ public class ServerTest {
 
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
         ServerBootstrap serverBootstrap = new ServerBootstrap();
-        NioEventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        NioEventLoopGroup bossGroup = new NioEventLoopGroup(2);
         NioEventLoopGroup workerGroup = new NioEventLoopGroup(2);
         serverBootstrap.group(bossGroup, workerGroup).
                 serverSocketChannel(serverSocketChannel);

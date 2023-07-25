@@ -133,7 +133,7 @@ public class NioEventLoop extends SingleThreadEventLoop {
         //这里是一个死循环
         for (; ; ) {
             //如果没有就绪事件，就在这里阻塞3秒
-            int selectedKeys = selector.select(3000);
+            int selectedKeys = selector.select(1000);
             //如果有事件或者单线程执行器中有任务待执行，就退出循环
             if (selectedKeys != 0 || hasTasks()) {
                 break;
