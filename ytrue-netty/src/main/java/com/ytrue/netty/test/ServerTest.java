@@ -1,7 +1,9 @@
 package com.ytrue.netty.test;
 
 import com.ytrue.netty.bootstrap.ServerBootstrap;
+import com.ytrue.netty.channel.ChannelFuture;
 import com.ytrue.netty.channel.nio.NioEventLoopGroup;
+import com.ytrue.netty.channel.socket.NioServerSocketChannel;
 
 import java.io.IOException;
 import java.nio.channels.ServerSocketChannel;
@@ -14,13 +16,13 @@ import java.nio.channels.ServerSocketChannel;
 public class ServerTest {
     public static void main(String[] args) throws IOException {
 
-        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
         ServerBootstrap serverBootstrap = new ServerBootstrap();
-        NioEventLoopGroup bossGroup = new NioEventLoopGroup(2);
+        NioEventLoopGroup bossGroup = new NioEventLoopGroup(1);
         NioEventLoopGroup workerGroup = new NioEventLoopGroup(2);
-        serverBootstrap.group(bossGroup, workerGroup).
-                serverSocketChannel(serverSocketChannel);
-        serverBootstrap.bind("127.0.0.1", 8080);
+        ChannelFuture channelFuture = serverBootstrap.
+                group(bossGroup,workerGroup).
+                channel(NioServerSocketChannel.class).
+                bind(9999).addListener(future -> System.out.println("我绑定成功了"));
 
     }
 }

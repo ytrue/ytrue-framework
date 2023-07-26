@@ -82,4 +82,14 @@ public abstract class MultiThreadEventLoopGroup extends MultiThreadEventExecutor
     protected ThreadFactory newDefaultThreadFactory() {
         return new DefaultThreadFactory(getClass(), Thread.MAX_PRIORITY);
     }
+
+    @Override
+    public ChannelFuture register(Channel channel) {
+        return next().register(channel);
+    }
+
+    @Override
+    public ChannelFuture register(ChannelPromise promise) {
+        return next().register(promise);
+    }
 }

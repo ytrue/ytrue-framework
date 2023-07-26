@@ -3,6 +3,7 @@ package com.ytrue.netty.channel;
 import com.ytrue.netty.channel.nio.NioEventLoop;
 import com.ytrue.netty.util.concurrent.RejectedExecutionHandler;
 import com.ytrue.netty.util.concurrent.SingleThreadEventExecutor;
+import com.ytrue.netty.util.internal.ObjectUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.channels.SelectionKey;
@@ -63,106 +64,24 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
 
 
     /**
-     * 注册socketChannel
+     * 因为没有和ServerSocketChannel，SocketChannel解耦，这里原本是几个重载的注册方法。现在可以把这几个方法变成一个了
      *
      * @param channel
-     * @param nioEventLoop
+     * @return
      */
-    public void register(SocketChannel channel, NioEventLoop nioEventLoop) {
-        // 如果执行该方法的线程就是执行器中的线程，直接执行方法即可
-        if (inEventLoop(Thread.currentThread())) {
-            register0(channel, nioEventLoop);
-        } else {
-            // /在这里，第一次向单线程执行器中提交任务的时候，执行器终于开始执行了,新的线程也开始创建
-            nioEventLoop.execute(() -> register0(channel, nioEventLoop));
-            log.info("客户端的channel已注册到多路复用器上了！:{}", Thread.currentThread().getName());
-        }
-    }
-
-
-    /**
-     * 注册ServerSocketChannel
-     *
-     * @param channel
-     * @param nioEventLoop
-     */
-    public void register(ServerSocketChannel channel, NioEventLoop nioEventLoop) {
-        //如果执行该方法的线程就是执行器中的线程，直接执行方法即可
-        if (inEventLoop(Thread.currentThread())) {
-            register0(channel, nioEventLoop);
-        } else {
-            //在这里，第一次向单线程执行器中提交任务的时候，执行器终于开始执行了
-            nioEventLoop.execute(() -> {
-                register0(channel, nioEventLoop);
-                log.info("服务器的channel已注册到多路复用器上了！:{}", Thread.currentThread().getName());
-            });
-        }
-    }
-
-
-    /**
-     * 客户端实际注册
-     *
-     * @param channel
-     * @param nioEventLoop
-     */
-    private void register0(SocketChannel channel, NioEventLoop nioEventLoop) {
-        try {
-            channel.configureBlocking(false);
-            channel.register(nioEventLoop.unwrappedSelector(), SelectionKey.OP_CONNECT);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-        }
+    @Override
+    public ChannelFuture register(Channel channel) {
+        //在这里可以发现在执行任务的时候，channel和promise也是绑定的
+        return register(new DefaultChannelPromise(channel, this));
     }
 
     /**
-     * 服务端实际注册
-     *
-     * @param channel
-     * @param nioEventLoop
+     * 因为还没有引入unsafe类，所以该方法暂时先简化实现
      */
-    private void register0(ServerSocketChannel channel, NioEventLoop nioEventLoop) {
-        try {
-            channel.configureBlocking(false);
-            channel.register(nioEventLoop.unwrappedSelector(), SelectionKey.OP_ACCEPT);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-        }
-    }
-
-
-    /**
-     * 注册读
-     *
-     * @param channel
-     * @param nioEventLoop
-     */
-    public void registerRead(SocketChannel channel, NioEventLoop nioEventLoop) {
-        //如果执行该方法的线程就是执行器中的线程，直接执行方法即可
-        if (inEventLoop(Thread.currentThread())) {
-            register0(channel, nioEventLoop);
-        } else {
-            //在这里，第一次向单线程执行器中提交任务的时候，执行器终于开始执行了
-            nioEventLoop.execute(() -> {
-                register00(channel, nioEventLoop);
-                log.info("客户端的channel已注册到多路复用器上了！:{}", Thread.currentThread().getName());
-            });
-        }
-    }
-
-
-    /**
-     * 该方法是特意为服务端接收到客户端channel，然后将channel注册到sleector而重载的
-     *
-     * @param channel
-     * @param nioEventLoop
-     */
-    private void register00(SocketChannel channel, NioEventLoop nioEventLoop) {
-        try {
-            channel.configureBlocking(false);
-            channel.register(nioEventLoop.unwrappedSelector(), SelectionKey.OP_READ);
-        } catch (Exception e) {
-            log.error(e.getMessage());
-        }
+    @Override
+    public ChannelFuture register(final ChannelPromise promise) {
+        ObjectUtil.checkNotNull(promise, "promise");
+        promise.channel().register(this, promise);
+        return promise;
     }
 }
