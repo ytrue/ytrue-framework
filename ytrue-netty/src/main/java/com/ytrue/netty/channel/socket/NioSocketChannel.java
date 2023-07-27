@@ -1,10 +1,12 @@
 package com.ytrue.netty.channel.socket;
 
 import com.ytrue.netty.channel.Channel;
+import com.ytrue.netty.channel.ChannelConfig;
 import com.ytrue.netty.channel.nio.AbstractNioByteChannel;
 import com.ytrue.netty.util.internal.SocketUtils;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -72,9 +74,10 @@ public class NioSocketChannel extends AbstractNioByteChannel {
      * @throws Exception
      */
     private void doBind0(SocketAddress localAddress) throws Exception {
-        //  socketChannel.bind(address);
+        // 调用socketChannel.bind(address);
         SocketUtils.bind(javaChannel(), localAddress);
     }
+
 
     @Override
     public boolean isActive() {
@@ -123,6 +126,39 @@ public class NioSocketChannel extends AbstractNioByteChannel {
     }
 
 
+    @Override
+    public InetSocketAddress localAddress() {
+        return (InetSocketAddress) super.localAddress();
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        return (InetSocketAddress) super.remoteAddress();
+    }
+
+    @Override
+    protected SocketAddress localAddress0() {
+        return javaChannel().socket().getLocalSocketAddress();
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return javaChannel().socket().getRemoteSocketAddress();
+    }
+
+
+    @Override
+    protected void doFinishConnect() throws Exception {
+        if (!javaChannel().finishConnect()) {
+            throw new Error();
+        }
+        // 看，在这里就能拿到socketchannel并且发送消息成功！说明问题并不是出在连接上，一定是哪里没有阻塞住，仔细想想netty的线程模型
+//        SocketChannel socketChannel = javaChannel();
+//        socketChannel.write(ByteBuffer.wrap("我是真正的netty！".getBytes()));
+//        System.out.println("数据发送了！");
+    }
+
+
     /**
      * 关闭channel
      *
@@ -132,4 +168,17 @@ public class NioSocketChannel extends AbstractNioByteChannel {
         javaChannel().close();
     }
 
+
+    @Override
+    protected void doWrite(Object msg) throws Exception {
+        //真正发送数据的时候到了，这时候就不能用NioSocketChannel了，要用java原生的socketchannel
+        SocketChannel socketChannel = javaChannel();
+        //转换数据类型
+        ByteBuffer buffer = (ByteBuffer) msg;
+        //发送数据
+        socketChannel.write(buffer);
+        //因为在我们自己的netty中，客户端的channel连接到服务端后，并没有绑定单线程执行器呢，所以即便发送了数据也收不到
+        //但我们可以看看客户端是否可以发送成功，证明我们的发送逻辑是没问题的，接收数据的验证，让我们放到引入channelhandler之后再验证
+        System.out.println("客户端发送数据成功了！");
+    }
 }

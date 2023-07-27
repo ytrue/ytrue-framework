@@ -25,20 +25,33 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         super(parent, ch, SelectionKey.OP_READ);
     }
 
-    /**
-     * 由于还未引入unsafe类，所以该方法直接定义在这里，先不设定接口
-     * 这个是客户端channel读取数据的方法
-     */
     @Override
-    protected void read() {
-        //暂时用最原始简陋的方法处理
-        ByteBuffer byteBuf = ByteBuffer.allocate(1024);
-        try {
-            doReadBytes(byteBuf);
-        } catch (Exception e) {
-            e.printStackTrace();
+    protected AbstractNioUnsafe newUnsafe() {
+        return new NioByteUnsafe();
+    }
+
+    protected class NioByteUnsafe extends AbstractNioUnsafe {
+        /**
+         * 读取
+         */
+        @Override
+        public final void read() {
+            //暂时用最原始简陋的方法处理
+            ByteBuffer byteBuf = ByteBuffer.allocate(1024);
+            try {
+                doReadBytes(byteBuf);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
+    ;
+
     protected abstract int doReadBytes(ByteBuffer buf) throws Exception;
+
+    @Override
+    protected void doWrite(Object msg) throws Exception {
+
+    }
 }

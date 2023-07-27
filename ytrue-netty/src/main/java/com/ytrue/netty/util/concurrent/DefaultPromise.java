@@ -394,7 +394,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      *
      * @return
      */
-    private boolean checkNotifyWaiters() {
+    private synchronized boolean checkNotifyWaiters() {
         // 判断waiters是否大于0
         if (waiters > 0) {
             // 唤醒所有的线程

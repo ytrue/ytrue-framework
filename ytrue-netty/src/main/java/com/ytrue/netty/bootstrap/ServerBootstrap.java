@@ -1,20 +1,15 @@
 package com.ytrue.netty.bootstrap;
 
 import com.ytrue.netty.channel.*;
-import com.ytrue.netty.channel.nio.NioEventLoop;
-import com.ytrue.netty.util.concurrent.DefaultPromise;
 import com.ytrue.netty.util.concurrent.EventExecutor;
 import com.ytrue.netty.util.internal.ObjectUtil;
 import com.ytrue.netty.util.internal.SocketUtils;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.ServerSocketChannel;
 
 /**
  * @author ytrue
@@ -30,7 +25,6 @@ public class ServerBootstrap<C extends Channel> {
     private EventLoopGroup workerGroup;
 
     private volatile ChannelFactory<? extends Channel> channelFactory;
-
 
 
     public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
@@ -65,7 +59,6 @@ public class ServerBootstrap<C extends Channel> {
     }
 
 
-
     private ChannelFuture doBind(SocketAddress localAddress) {
         //服务端的channel在这里初始化，然后注册到单线程执行器的selector上
         final ChannelFuture regFuture = initAndRegister();
@@ -78,7 +71,7 @@ public class ServerBootstrap<C extends Channel> {
             //执行绑定方法
             doBind0(regFuture, channel, localAddress, promise);
             return promise;
-        }else {
+        } else {
             //走到这里，说明上面的initAndRegister方法中，服务端的channel还没有完全注册到单线程执行器的selector上
             //此时可以直接则向regFuture添加回调函数，这里有个专门的静态内部类，用来协助判断服务端channel是否注册成功
             //该回调函数会在regFuture完成的状态下被调用，在回调函数中进行服务端的绑定，回顾一下第四课就明白了。
@@ -109,7 +102,7 @@ public class ServerBootstrap<C extends Channel> {
                 //在这里仍要判断一次服务端的channel是否注册成功
                 if (regFuture.isSuccess()) {
                     //注册成功之后开始绑定
-                    channel.bind(localAddress,promise);
+                    channel.bind(localAddress, promise);
                 } else {
                     //走到这里说明没有注册成功，把异常赋值给promise
                     promise.setFailure(regFuture.cause());
@@ -135,6 +128,7 @@ public class ServerBootstrap<C extends Channel> {
         PendingRegistrationPromise(Channel channel) {
             super(channel);
         }
+
         //该方法是该静态类独有的，该方法被调用的时候，registered赋值为true
         void registered() {
             registered = true;

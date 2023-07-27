@@ -19,8 +19,6 @@ import java.net.SocketAddress;
 @NoArgsConstructor
 public class Bootstrap<C extends Channel> {
 
-    private NioEventLoop nioEventLoop;
-
     private EventLoopGroup workerGroup;
 
     private volatile ChannelFactory<? extends Channel> channelFactory;
@@ -36,8 +34,9 @@ public class Bootstrap<C extends Channel> {
         return this;
     }
 
-    public void connect(String inetHost, int inetPort) {
-        connect(new InetSocketAddress(inetHost, inetPort));
+
+    public ChannelFuture connect(String inetHost, int inetPort) {
+        return connect(new InetSocketAddress(inetHost, inetPort));
     }
 
 
@@ -98,13 +97,14 @@ public class Bootstrap<C extends Channel> {
             final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise connectPromise) {
         //得到客户端的channel
         final Channel channel = connectPromise.channel();
+
         //仍然是异步注册
         channel.eventLoop().execute(new Runnable() {
             @Override
             public void run() {
                 if (localAddress == null) {
                     //这里会走这个，我们并没有传递localAddress的地址
-                    channel.connect(remoteAddress,null, connectPromise);
+                    channel.connect(remoteAddress, null, connectPromise);
                 }
                 //添加该监听器，如果channel连接失败，该监听器会关闭该channel
                 connectPromise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);

@@ -66,18 +66,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel {
         return isOpen() && javaChannel().socket().isBound();
     }
 
-    /**
-     * 这里做空实现即可，服务端的channel并不会做连接动作
-     *
-     * @param remoteAddress
-     * @param localAddress
-     * @return
-     * @throws Exception
-     */
-    @Override
-    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
-        throw new UnsupportedOperationException();
-    }
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
@@ -110,5 +98,41 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel {
     public NioEventLoop eventLoop() {
         return (NioEventLoop) super.eventLoop();
     }
+
+    @Override
+    protected SocketAddress localAddress0() {
+        return SocketUtils.localSocketAddress(javaChannel().socket());
+    }
+
+    @Override
+    protected SocketAddress remoteAddress0() {
+        return null;
+    }
+
+
+    @Override
+    protected void doFinishConnect() throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+
+    /**
+     * 这里做空实现即可，服务端的channel并不会做连接动作
+     *
+     * @param remoteAddress
+     * @param localAddress
+     * @return
+     * @throws Exception
+     */
+    @Override
+    protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void doClose() throws Exception {
+        javaChannel().close();
+    }
+
 
 }

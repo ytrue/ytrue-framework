@@ -7,7 +7,7 @@ import java.net.SocketAddress;
  * @date 2023-07-26 9:07
  * @description Channel
  */
-public interface Channel {
+public interface Channel extends ChannelOutboundInvoker {
 
     /**
      * 在客户端连接建立后，生成Channel通道的时候会为每一个Channel分配一个唯一的ID，该ID可能的生成策略有：
@@ -48,7 +48,7 @@ public interface Channel {
      *
      * @return
      */
-    ChannelConfig config();
+    //ChannelConfig config();
 
 
     /**
@@ -100,32 +100,120 @@ public interface Channel {
 
 
     /**
-     * @Author: PP-jessica
-     * @Description:该方法并不在此接口，而是在ChannelOutboundInvoker接口，现在先放在这里
+     * 从远程对等端读取数据的
+     *
+     * @return
      */
-    ChannelFuture close();
+    @Override
+    Channel read();
 
     /**
-     * @Author: PP-jessica
-     * @Description:该方法并不在此接口，而是在ChannelOutboundInvoker接口，现在先放在这里
+     * 刷新底层的发送缓冲区，将缓冲区中的数据立即发送给远程对等端
+     *
+     * @return
      */
-    void bind(SocketAddress localAddress, ChannelPromise promise);
+    @Override
+    Channel flush();
+
+
 
     /**
-     * @Author: PP-jessica
-     * @Description:该方法并不在此接口，而是在ChannelOutboundInvoker接口，现在先放在这里
+     * 终于引入了Unsafe类
+     *
+     * @return
      */
-    void connect(SocketAddress remoteAddress, final SocketAddress localAddress, ChannelPromise promise);
+    Unsafe unsafe();
 
-    /**
-     * @Author: PP-jessica
-     * @Description:该方法并不在此接口，而是在unsafe接口，现在先放在这里
-     */
-    void register(EventLoop eventLoop, ChannelPromise promise);
+    interface Unsafe {
+        /**
+         * 获取当前Channel的本地绑定地址
+         *
+         * @return
+         */
+        SocketAddress localAddress();
 
-    /**
-     * @Author: PP-jessica
-     * @Description:该方法并不在此接口，而是在unsafe接口，现在先放在这里
-     */
-    void beginRead();
+
+        /**
+         * 获取当前Channel通信的远程Socket地址
+         *
+         * @return
+         */
+        SocketAddress remoteAddress();
+
+        /**
+         * channel 注册 到select
+         *
+         * @param eventLoop
+         * @param promise
+         */
+        void register(EventLoop eventLoop, ChannelPromise promise);
+
+
+        /**
+         * 将Channel绑定到指定的本地地址
+         *
+         * @param localAddress
+         * @param promise
+         */
+        void bind(SocketAddress localAddress, ChannelPromise promise);
+
+        /**
+         * 使用指定的本地和远程地址连接到远程对等端
+         *
+         * @param remoteAddress
+         * @param localAddress
+         * @param promise
+         */
+        void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
+
+        /**
+         * 断开与远程对等端的连接
+         *
+         * @param promise
+         */
+        void disconnect(ChannelPromise promise);
+
+        /**
+         * 关闭Channel
+         *
+         * @param promise
+         */
+        void close(ChannelPromise promise);
+
+        /**
+         * 用于强制关闭Channel。它的作用是立即关闭Channel，并丢弃所有未发送的数据。与普通的close()方法不同，
+         * closeForcibly()方法不会等待未发送的数据被发送完毕，而是立即关闭连接
+         * closeForcibly()方法在某些情况下可能会导致数据的丢失，因为未发送的数据将被丢弃而不会被发送。因此，应该谨慎使用closeForcibly()方法，并确保在关闭Channel之前没有任何重要的未发送数据。
+         * 一般情况下，推荐使用close()方法来正常关闭Channel
+         * ，以确保数据的可靠传输。只有在必要的情况下，
+         * 才应该使用closeForcibly()方法来强制关闭Channel。
+         */
+        void closeForcibly();
+
+        /**
+         * 取消Channel的注册
+         *
+         * @param promise
+         */
+        void deregister(ChannelPromise promise);
+
+        /**
+         * 开始从Channel中读取数据，并将读取到的数据传递给ChannelPipeline中的下一个ChannelInboundHandler进行处理。
+         */
+        void beginRead();
+
+        /**
+         * 将指定的消息写入底层的发送缓冲区
+         *
+         * @param msg
+         * @param promise
+         */
+        void write(Object msg, ChannelPromise promise);
+
+        /**
+         * 刷新底层的发送缓冲区，将缓冲区中的数据立即发送给远程对等端。
+         */
+        void flush();
+
+    }
 }
