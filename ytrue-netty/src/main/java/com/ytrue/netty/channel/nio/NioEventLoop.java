@@ -186,6 +186,8 @@ public class NioEventLoop extends SingleThreadEventLoop {
             if (ops == SelectionKey.OP_ACCEPT) {
                 // unsafe.read();
 
+                log.info("有客户端连接建立了");
+
                 // 设置读的事件
                 ServerSocketChannel ch1 = (ServerSocketChannel) ch.javaChannel();
                 SocketChannel socketChannel = ch1.accept();
@@ -193,6 +195,7 @@ public class NioEventLoop extends SingleThreadEventLoop {
                 socketChannel.register(selector, SelectionKey.OP_READ, new NioSocketChannel(ch, socketChannel));
             }
         } catch (CancelledKeyException ignored) {
+            k.cancel();
             throw new RuntimeException(ignored.getMessage());
         }
     }
