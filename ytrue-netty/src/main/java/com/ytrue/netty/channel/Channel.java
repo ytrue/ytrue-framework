@@ -1,5 +1,7 @@
 package com.ytrue.netty.channel;
 
+import com.ytrue.netty.util.AttributeMap;
+
 import java.net.SocketAddress;
 
 /**
@@ -7,7 +9,7 @@ import java.net.SocketAddress;
  * @date 2023-07-26 9:07
  * @description Channel
  */
-public interface Channel extends ChannelOutboundInvoker {
+public interface Channel extends AttributeMap, ChannelOutboundInvoker {
 
     /**
      * 在客户端连接建立后，生成Channel通道的时候会为每一个Channel分配一个唯一的ID，该ID可能的生成策略有：
@@ -48,7 +50,7 @@ public interface Channel extends ChannelOutboundInvoker {
      *
      * @return
      */
-    //ChannelConfig config();
+    ChannelConfig config();
 
 
     /**
@@ -114,7 +116,6 @@ public interface Channel extends ChannelOutboundInvoker {
      */
     @Override
     Channel flush();
-
 
 
     /**

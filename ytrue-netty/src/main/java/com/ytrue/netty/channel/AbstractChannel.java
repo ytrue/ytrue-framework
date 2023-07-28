@@ -1,5 +1,6 @@
 package com.ytrue.netty.channel;
 
+import com.ytrue.netty.util.DefaultAttributeMap;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
@@ -17,7 +18,7 @@ import java.nio.channels.ClosedChannelException;
  * - AbstractChannel还提供了一些辅助方法，用于管理Channel的状态、属性、事件等。
  */
 @Slf4j
-public abstract class AbstractChannel implements Channel {
+public abstract class AbstractChannel extends DefaultAttributeMap implements Channel {
 
     /**
      * 当创建的是客户端channel时，parent为serversocketchannel,如果创建的为服务端channel，parent则为null

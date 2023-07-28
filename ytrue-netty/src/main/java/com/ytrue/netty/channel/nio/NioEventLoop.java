@@ -4,7 +4,7 @@ import com.ytrue.netty.channel.EventLoopGroup;
 import com.ytrue.netty.channel.EventLoopTaskQueueFactory;
 import com.ytrue.netty.channel.SelectStrategy;
 import com.ytrue.netty.channel.SingleThreadEventLoop;
-import com.ytrue.netty.channel.socket.NioSocketChannel;
+import com.ytrue.netty.channel.socket.nio.NioSocketChannel;
 import com.ytrue.netty.util.concurrent.RejectedExecutionHandler;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;

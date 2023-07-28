@@ -1,44 +1,48 @@
 package com.ytrue.netty.bootstrap;
 
 import com.ytrue.netty.channel.*;
-import com.ytrue.netty.channel.nio.NioEventLoop;
-import com.ytrue.netty.util.concurrent.EventExecutor;
+import com.ytrue.netty.util.AttributeKey;
 import com.ytrue.netty.util.internal.ObjectUtil;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Map;
 
 /**
  * @author ytrue
- * @date 2023-07-22 14:43
+ * @date 2023-07-28 15:34
  * @description Bootstrap
  */
 @Slf4j
 @NoArgsConstructor
-public class Bootstrap<C extends Channel> {
-
-    private EventLoopGroup workerGroup;
+public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     private volatile ChannelFactory<? extends Channel> channelFactory;
 
+    private final BootstrapConfig config = new BootstrapConfig(this);
 
-    public Bootstrap group(EventLoopGroup childGroup) {
-        this.workerGroup = childGroup;
-        return this;
+    /**
+     * 远程地址
+     */
+    private volatile SocketAddress remoteAddress;
+
+
+    private Bootstrap(Bootstrap bootstrap) {
+        super(bootstrap);
+        remoteAddress = bootstrap.remoteAddress;
     }
 
-    public Bootstrap channel(Class<? extends C> channelClass) {
-        this.channelFactory = new ReflectiveChannelFactory<C>(channelClass);
+
+    public Bootstrap remoteAddress(SocketAddress remoteAddress) {
+        this.remoteAddress = remoteAddress;
         return this;
     }
-
 
     public ChannelFuture connect(String inetHost, int inetPort) {
         return connect(new InetSocketAddress(inetHost, inetPort));
     }
-
 
     public ChannelFuture connect(SocketAddress remoteAddress) {
         ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
@@ -46,12 +50,8 @@ public class Bootstrap<C extends Channel> {
     }
 
     private ChannelFuture doResolveAndConnect(final SocketAddress remoteAddress, final SocketAddress localAddress) {
-        // 这里的逻辑和serverbootstarp一样，但是在这里又要写一遍该方法，现在是不是发现，如果bootstarp和serverbootstarp有一个
-        // 抽象父类就好了，就可以在父类中定义模版方法了。实际上源码中确实有一个父类，这个方法被定义在父类中，但我们暂时还不引入
-        // 整个方法和serverbootstrap中的doBind方法类似，判断和处理逻辑几乎一样
-
         final ChannelFuture regFuture = initAndRegister();
-        //得到要注册的kehuduanchannel
+        //得到要注册的客户端channel
         final Channel channel = regFuture.channel();
         if (regFuture.isDone()) {
             //这里的意思是future执行完成，但是没有成功，那么直接返回future即可
@@ -64,22 +64,19 @@ public class Bootstrap<C extends Channel> {
         } else {
             //该内部类也是在抽象父类中，但这里我又在该类中定义了一遍
             final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
-            regFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    Throwable cause = future.cause();
-                    if (cause != null) {
-                        promise.setFailure(cause);
-                    } else {
-                        promise.registered();
-                        doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
-                    }
+            //给regFuture添加监听器，等regFuture有结果了，监听器开始执行，在监听器中继续执行连接服务端方法
+            regFuture.addListener((ChannelFutureListener) future -> {
+                Throwable cause = future.cause();
+                if (cause != null) {
+                    promise.setFailure(cause);
+                } else {
+                    promise.registered();
+                    doResolveAndConnect0(channel, remoteAddress, localAddress, promise);
                 }
             });
             return promise;
         }
     }
-
 
     private ChannelFuture doResolveAndConnect0(final Channel channel, SocketAddress remoteAddress,
                                                final SocketAddress localAddress, final ChannelPromise promise) {
@@ -93,59 +90,51 @@ public class Bootstrap<C extends Channel> {
         return promise;
     }
 
-    private static void doConnect(
-            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise connectPromise) {
+    private static void doConnect(final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise connectPromise) {
         //得到客户端的channel
         final Channel channel = connectPromise.channel();
-
         //仍然是异步注册
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                if (localAddress == null) {
-                    //这里会走这个，我们并没有传递localAddress的地址
-                    channel.connect(remoteAddress, null, connectPromise);
-                }
-                //添加该监听器，如果channel连接失败，该监听器会关闭该channel
-                connectPromise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+        channel.eventLoop().execute(() -> {
+            if (localAddress == null) {
+                //这里会走这个，我们并没有传递localAddress的地址
+                channel.connect(remoteAddress, null, connectPromise);
             }
+            //添加该监听器，如果channel连接失败，该监听器会关闭该channel
+            connectPromise.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         });
     }
 
-    final ChannelFuture initAndRegister() {
-        Channel channel;
-        //在这里初始化服务端channel，反射创建对象调用的无参构造器，
-        //可以去NioServerSocketChannel类中看看无参构造器中做了什么
-        channel = channelFactory.newChannel();
-        //这里是异步注册的，一般来说，workerGroup设置的也是一个线程执行器。只有在服务端的workerGroup中，才会设置多个线程执行器
-        ChannelFuture regFuture = workerGroup.next().register(channel);
-        return regFuture;
-    }
 
-
-    static final class PendingRegistrationPromise extends DefaultChannelPromise {
-
-        private volatile boolean registered;
-
-        PendingRegistrationPromise(Channel channel) {
-            super(channel);
+    @Override
+    void init(Channel channel) throws Exception {
+        final Map<ChannelOption<?>, Object> options = options0();
+        synchronized (options) {
+            setChannelOptions(channel, options);
         }
-
-        //该方法是该静态类独有的，该方法被调用的时候，registered赋值为true
-        void registered() {
-            registered = true;
-        }
-
-        /**
-         * 该方法简化一下， 全局的执行器不是必须引入的
-         *
-         * @return
-         */
-        @Override
-        protected EventExecutor executor() {
-            return super.executor();
-
+        final Map<AttributeKey<?>, Object> attrs = attrs0();
+        synchronized (attrs) {
+            for (Map.Entry<AttributeKey<?>, Object> e : attrs.entrySet()) {
+                channel.attr((AttributeKey<Object>) e.getKey()).set(e.getValue());
+            }
         }
     }
 
+    @Override
+    public Bootstrap validate() {
+        super.validate();
+//        if (config.handler() == null) {
+//            throw new IllegalStateException("handler not set");
+//        }
+        return this;
+    }
+
+
+    @Override
+    public AbstractBootstrapConfig<Bootstrap, Channel> config() {
+        return config;
+    }
+
+    public SocketAddress remoteAddress() {
+        return remoteAddress;
+    }
 }

@@ -1,148 +1,153 @@
 package com.ytrue.netty.bootstrap;
 
-import com.ytrue.netty.channel.*;
-import com.ytrue.netty.util.concurrent.EventExecutor;
+import com.ytrue.netty.channel.Channel;
+import com.ytrue.netty.channel.ChannelFactory;
+import com.ytrue.netty.channel.ChannelOption;
+import com.ytrue.netty.channel.EventLoopGroup;
+import com.ytrue.netty.util.AttributeKey;
 import com.ytrue.netty.util.internal.ObjectUtil;
-import com.ytrue.netty.util.internal.SocketUtils;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * @author ytrue
- * @date 2023-07-22 14:46
+ * @date 2023-07-28 15:30
  * @description ServerBootstrap
  */
 @Slf4j
 @NoArgsConstructor
-public class ServerBootstrap<C extends Channel> {
+public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, Channel> {
 
     private EventLoopGroup bossGroup;
 
-    private EventLoopGroup workerGroup;
+
+    /**
+     * 用户设定的NioSocketChannel的参数会暂时存放在这个map中，channel初始化的时候，这里面的数据才会存放到channel的配置类中
+     */
+    private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<>();
+
+    /**
+     * 用户设定的NioSocketChannel的参数会暂时存放在这个map中，channel初始化的时候，这里面的数据才会存放到channel的配置类中
+     */
+    private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<>();
+
+    private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
+
+    private EventLoopGroup childGroup;
 
     private volatile ChannelFactory<? extends Channel> channelFactory;
 
+    @Override
+    void init(Channel channel) throws Exception {
+        //得到所有存储在map中的用户设定的channel的参数
+        final Map<ChannelOption<?>, Object> options = options0();
+        synchronized (options) {
+            // 把初始化时用户配置的参数全都放到channel的config类中，因为没有引入netty源码的打印日志模块，
+            // 所以就把该方法修改了，去掉了日志参数
+            setChannelOptions(channel, options);
+        }
+        final Map<AttributeKey<?>, Object> attrs = attrs0();
+        synchronized (attrs) {
+            for (Map.Entry<AttributeKey<?>, Object> e : attrs.entrySet()) {
+                @SuppressWarnings("unchecked") AttributeKey<Object> key = (AttributeKey<Object>) e.getKey();
+                channel.attr(key).set(e.getValue());
+            }
+        }
 
-    public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
-        this.bossGroup = parentGroup;
-        this.workerGroup = childGroup;
-        return this;
     }
+
+    private ServerBootstrap(ServerBootstrap bootstrap) {
+        super(bootstrap);
+        childGroup = bootstrap.childGroup;
+        synchronized (bootstrap.childOptions) {
+            childOptions.putAll(bootstrap.childOptions);
+        }
+        synchronized (bootstrap.childAttrs) {
+            childAttrs.putAll(bootstrap.childAttrs);
+        }
+    }
+
+    @Override
+    public ServerBootstrap group(EventLoopGroup group) {
+        return group(group, group);
+    }
+
 
     /**
-     * @Author: PP-jessica
-     * @Description:创建channel的工厂
+     * 把boss线程组和工作线程组赋值给属性，并且把boss线程组传递到父类，这时候线程组都已经初始化完毕了
+     * 里面的每个线程执行器也都初始化完毕
+     *
+     * @param parentGroup
+     * @param childGroup
+     * @return
      */
-    public ServerBootstrap channel(Class<? extends C> channelClass) {
-        this.channelFactory = new ReflectiveChannelFactory<C>(channelClass);
+    public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
+        super.group(parentGroup);
+        ObjectUtil.checkNotNull(childGroup, "childGroup");
+        if (this.childGroup != null) {
+            throw new IllegalStateException("childGroup set already");
+        }
+        this.childGroup = childGroup;
         return this;
     }
 
-    public ChannelFuture bind(int inetPort) {
-        return bind(new InetSocketAddress(inetPort));
-    }
-
-    public ChannelFuture bind(String inetHost, int inetPort) {
-        return bind(SocketUtils.socketAddress(inetHost, inetPort));
-    }
-
-    public ChannelFuture bind(InetAddress inetHost, int inetPort) {
-        return bind(new InetSocketAddress(inetHost, inetPort));
-    }
-
-    public ChannelFuture bind(SocketAddress localAddress) {
-        return doBind(ObjectUtil.checkNotNull(localAddress, "localAddress"));
-    }
-
-
-    private ChannelFuture doBind(SocketAddress localAddress) {
-        //服务端的channel在这里初始化，然后注册到单线程执行器的selector上
-        final ChannelFuture regFuture = initAndRegister();
-        //得到服务端的channel
-        Channel channel = regFuture.channel();
-        //要判断future有没有完成
-        if (regFuture.isDone()) {
-            //完成的情况下，直接开始执行绑定端口号的操作,首先创建一个future
-            ChannelPromise promise = new DefaultChannelPromise(channel);
-            //执行绑定方法
-            doBind0(regFuture, channel, localAddress, promise);
-            return promise;
-        } else {
-            //走到这里，说明上面的initAndRegister方法中，服务端的channel还没有完全注册到单线程执行器的selector上
-            //此时可以直接则向regFuture添加回调函数，这里有个专门的静态内部类，用来协助判断服务端channel是否注册成功
-            //该回调函数会在regFuture完成的状态下被调用，在回调函数中进行服务端的绑定，回顾一下第四课就明白了。
-            final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
-            regFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    Throwable cause = future.cause();
-                    if (cause != null) {
-                        promise.setFailure(cause);
-                    } else {
-                        //走到这里说明服务端channel在注册过程中没有发生异常，已经注册成功，可以开始绑定端口号了
-                        promise.registered();
-                        doBind0(regFuture, channel, localAddress, promise);
-                    }
-                }
-            });
-            return promise;
-        }
-    }
-
-    private static void doBind0(final ChannelFuture regFuture, final Channel channel,
-                                final SocketAddress localAddress, final ChannelPromise promise) {
-        //绑定也是异步操作
-        channel.eventLoop().execute(new Runnable() {
-            @Override
-            public void run() {
-                //在这里仍要判断一次服务端的channel是否注册成功
-                if (regFuture.isSuccess()) {
-                    //注册成功之后开始绑定
-                    channel.bind(localAddress, promise);
-                } else {
-                    //走到这里说明没有注册成功，把异常赋值给promise
-                    promise.setFailure(regFuture.cause());
-                }
+    public <T> ServerBootstrap childOption(ChannelOption<T> childOption, T value) {
+        ObjectUtil.checkNotNull(childOption, "childOption");
+        if (value == null) {
+            synchronized (childOptions) {
+                childOptions.remove(childOption);
             }
-        });
+        } else {
+            synchronized (childOptions) {
+                childOptions.put(childOption, value);
+            }
+        }
+        return this;
     }
 
-    final ChannelFuture initAndRegister() {
-        Channel channel = null;
-        //在这里初始化服务端channel，反射创建对象调用的无参构造器，
-        //可以去NioServerSocketChannel类中看看无参构造器中做了什么
-        channel = channelFactory.newChannel();
-        //这里是异步注册的，一般来说，bossGroup设置的都是一个线程。
-        ChannelFuture regFuture = bossGroup.next().register(channel);
-        return regFuture;
+    public <T> ServerBootstrap childAttr(AttributeKey<T> childKey, T value) {
+        ObjectUtil.checkNotNull(childKey, "childKey");
+        if (value == null) {
+            childAttrs.remove(childKey);
+        } else {
+            childAttrs.put(childKey, value);
+        }
+        return this;
     }
 
-    static final class PendingRegistrationPromise extends DefaultChannelPromise {
-
-        private volatile boolean registered;
-
-        PendingRegistrationPromise(Channel channel) {
-            super(channel);
-        }
-
-        //该方法是该静态类独有的，该方法被调用的时候，registered赋值为true
-        void registered() {
-            registered = true;
-        }
-
-
-        /**
-         * @Author: PP-jessica
-         * @Description:该方法简化一下， 全局的执行器不是必须引入的
-         */
-        @Override
-        protected EventExecutor executor() {
-            return super.executor();
-        }
+    @SuppressWarnings("unchecked")
+    private static Map.Entry<AttributeKey<?>, Object>[] newAttrArray(int size) {
+        return new Map.Entry[size];
     }
 
+    @SuppressWarnings("unchecked")
+    private static Map.Entry<ChannelOption<?>, Object>[] newOptionArray(int size) {
+        return new Map.Entry[size];
+    }
+
+    @Override
+    public ServerBootstrap validate() {
+        super.validate();
+        //还没有引入channelHandler，先把这一段注释掉
+//        if (childHandler == null) {
+//            throw new IllegalStateException("childHandler not set");
+//        }
+        if (childGroup == null) {
+            log.warn("childGroup is not set. Using parentGroup instead.");
+            childGroup = config.group();
+        }
+        return this;
+    }
+
+    @Override
+    public AbstractBootstrapConfig<ServerBootstrap, Channel> config() {
+        return config;
+    }
+
+    public EventLoopGroup childGroup() {
+        return childGroup;
+    }
 }

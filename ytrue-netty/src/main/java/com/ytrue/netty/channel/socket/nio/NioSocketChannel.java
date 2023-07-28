@@ -1,17 +1,22 @@
-package com.ytrue.netty.channel.socket;
+package com.ytrue.netty.channel.socket.nio;
 
 import com.ytrue.netty.channel.Channel;
 import com.ytrue.netty.channel.ChannelConfig;
+import com.ytrue.netty.channel.ChannelOption;
 import com.ytrue.netty.channel.nio.AbstractNioByteChannel;
+import com.ytrue.netty.channel.socket.DefaultSocketChannelConfig;
+import com.ytrue.netty.channel.socket.SocketChannelConfig;
 import com.ytrue.netty.util.internal.SocketUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
+import java.util.Map;
 
 /**
  * @author ytrue
@@ -22,6 +27,7 @@ public class NioSocketChannel extends AbstractNioByteChannel {
 
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
+    private final SocketChannelConfig config;
 
     /**
      * 通过SelectorProvider获取SocketChannel
@@ -55,6 +61,7 @@ public class NioSocketChannel extends AbstractNioByteChannel {
 
     public NioSocketChannel(Channel parent, SocketChannel socket) {
         super(parent, socket);
+        config = new NioSocketChannelConfig(this, socket.socket());
     }
 
     @Override
@@ -78,6 +85,11 @@ public class NioSocketChannel extends AbstractNioByteChannel {
         SocketUtils.bind(javaChannel(), localAddress);
     }
 
+
+    @Override
+    public SocketChannelConfig config() {
+        return config;
+    }
 
     @Override
     public boolean isActive() {
@@ -180,5 +192,66 @@ public class NioSocketChannel extends AbstractNioByteChannel {
         //因为在我们自己的netty中，客户端的channel连接到服务端后，并没有绑定单线程执行器呢，所以即便发送了数据也收不到
         //但我们可以看看客户端是否可以发送成功，证明我们的发送逻辑是没问题的，接收数据的验证，让我们放到引入channelhandler之后再验证
         System.out.println("客户端发送数据成功了！");
+    }
+
+
+    /**
+     * 用户设置的客户端channel的参数由此类进行设置，这里面有的方法现在还不需要是用来干什么的
+     */
+    private final class NioSocketChannelConfig extends DefaultSocketChannelConfig {
+        private volatile int maxBytesPerGatheringWrite = Integer.MAX_VALUE;
+
+        private NioSocketChannelConfig(NioSocketChannel channel, Socket javaSocket) {
+            super(channel, javaSocket);
+            calculateMaxBytesPerGatheringWrite();
+        }
+
+        @Override
+        public NioSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+            super.setSendBufferSize(sendBufferSize);
+            calculateMaxBytesPerGatheringWrite();
+            return this;
+        }
+
+        @Override
+        public <T> boolean setOption(ChannelOption<T> option, T value) {
+            if (option instanceof NioChannelOption) {
+                return NioChannelOption.setOption(jdkChannel(), (NioChannelOption<T>) option, value);
+            }
+            return super.setOption(option, value);
+        }
+
+        @Override
+        public <T> T getOption(ChannelOption<T> option) {
+            if (option instanceof NioChannelOption) {
+                return NioChannelOption.getOption(jdkChannel(), (NioChannelOption<T>) option);
+            }
+            return super.getOption(option);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public Map<ChannelOption<?>, Object> getOptions() {
+            return getOptions(super.getOptions(), NioChannelOption.getOptions(jdkChannel()));
+        }
+
+        void setMaxBytesPerGatheringWrite(int maxBytesPerGatheringWrite) {
+            this.maxBytesPerGatheringWrite = maxBytesPerGatheringWrite;
+        }
+
+        int getMaxBytesPerGatheringWrite() {
+            return maxBytesPerGatheringWrite;
+        }
+
+        private void calculateMaxBytesPerGatheringWrite() {
+            int newSendBufferSize = getSendBufferSize() << 1;
+            if (newSendBufferSize > 0) {
+                setMaxBytesPerGatheringWrite(getSendBufferSize() << 1);
+            }
+        }
+
+        private SocketChannel jdkChannel() {
+            return ((NioSocketChannel) channel).javaChannel();
+        }
     }
 }
