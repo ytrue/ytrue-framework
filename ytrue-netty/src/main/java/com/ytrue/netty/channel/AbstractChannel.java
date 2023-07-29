@@ -61,7 +61,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     private volatile boolean registered;
 
-
     /**
      * 加入unsafe属性
      */
@@ -148,6 +147,80 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
+    public Channel read() {
+        unsafe.beginRead();
+        return this;
+    }
+
+    @Override
+    public Channel flush() {
+        return null;
+    }
+
+    // 下面是 ChannelOutboundInvoker 接口方法
+    @Override
+    public ChannelFuture bind(SocketAddress localAddress) {
+        return null;
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress) {
+        return null;
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        return null;
+    }
+
+    @Override
+    public ChannelFuture disconnect() {
+        return null;
+    }
+
+    @Override
+    public ChannelFuture close() {
+        return null;
+    }
+
+    @Override
+    public ChannelFuture deregister() {
+        return null;
+    }
+
+    @Override
+    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        unsafe.bind(localAddress, promise);
+        return promise;
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+        return null;
+    }
+
+    @Override
+    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        unsafe.connect(remoteAddress, localAddress, promise);
+        return promise;
+    }
+
+    @Override
+    public ChannelFuture disconnect(ChannelPromise promise) {
+        return null;
+    }
+
+    @Override
+    public ChannelFuture close(ChannelPromise promise) {
+        return null;
+    }
+
+    @Override
+    public ChannelFuture deregister(ChannelPromise promise) {
+        return null;
+    }
+
+    @Override
     public ChannelFuture write(Object msg) {
         return null;
     }
@@ -165,43 +238,29 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
-    public ChannelFuture close() {
-        return null;
-    }
-
-
-    @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
         return null;
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        unsafe.connect(remoteAddress, localAddress, promise);
-        return promise;
+    public ChannelPromise newPromise() {
+        return null;
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        unsafe.bind(localAddress, promise);
-        return promise;
+    public ChannelFuture newSucceededFuture() {
+        return null;
     }
-
 
     @Override
-    public Channel read() {
-        unsafe.beginRead();
-        return this;
+    public ChannelFuture newFailedFuture(Throwable cause) {
+        return null;
     }
+    // ChannelOutboundInvoker 接口方法结束
 
     @Override
     public Unsafe unsafe() {
         return unsafe;
-    }
-
-    @Override
-    public Channel flush() {
-        return null;
     }
 
     /**

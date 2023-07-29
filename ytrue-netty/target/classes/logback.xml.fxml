@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="false" scanPeriod="60 seconds" debug="false">
+    <property name="PROJECT_NAME" value="logs" />
+
+    <!--方式一：设置日志根目录，参数LOG_HOME地址，该方法是为LOG_HOME添加默认值，需要janino支持-->
+    <if condition='property("LOG_HOME")==""'>
+        <then>
+            <property name="LOG_HOME" value="${user.dir}" />
+        </then>
+    </if>
+
+    <!--方式二：设置日志根目录，直接指定-->
+    <!--<property name="LOG_HOME" value="/testLog/apache-tomcat-9.0.21" />-->
+    <property name="outformat" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}[%file:%line]:%msg%n"/>
+
+    <!-- <logger name="org.hibernate" level="WARN"/> -->
+    <logger name="ch.qos.logback" level="WARN"/>
+    <logger name="com.ytrue.netty" level="INFO"/>
+
+
+    <!--控制台输出 -->
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>
+                ${outformat}
+            </pattern>
+            <charset class="java.nio.charset.Charset">UTF-8</charset>
+        </encoder>
+    </appender>
+
+
+    <!-- 日志级别 -->
+    <root level="INFO">
+        <appender-ref ref="console" />
+    </root>
+
+</configuration>
