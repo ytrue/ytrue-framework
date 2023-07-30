@@ -107,6 +107,11 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
 
     @Override
     void init(Channel channel) throws Exception {
+        ChannelPipeline p = channel.pipeline();
+        //向ChannelPipeline添加用户设置的NioSocketChannel的ChannelHandler
+        p.addLast(config.handler());
+
+        //下面的逻辑和服务端channel的一样，都是把用户设置的参数传进channel配置类和channel中
         final Map<ChannelOption<?>, Object> options = options0();
         synchronized (options) {
             setChannelOptions(channel, options);

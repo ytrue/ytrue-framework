@@ -15,31 +15,14 @@ public class ClientTest {
     public static void main(String[] args) throws IOException, InterruptedException {
 
         NioEventLoopGroup workerGroup = new NioEventLoopGroup(1);
-
         Bootstrap bootstrap = new Bootstrap();
-        bootstrap.channel(NioSocketChannel.class);
-        bootstrap.group(workerGroup);
-
-        ChannelFuture channelFuture = bootstrap.connect("127.0.0.1", 9993).sync();
-
-
-        /*
-         * 人为将程序中止，等待连接创建完成,否则会报如下错误
-         * java.nio.channels.NotYetConnectedException at sun.nio.ch.SocketChannelImpl.ensureWriteOpen(SocketChannelImpl.java:274)
-         */
-        Thread.sleep(3000);
-
+        ChannelFuture channelFuture = bootstrap.group(workerGroup).
+                channel(NioSocketChannel.class).
+                handler(new TestHandlerOne()).
+                connect("127.0.0.1",8080);
+        Thread.sleep(4000);
         Channel channel = channelFuture.channel();
         channel.writeAndFlush(ByteBuffer.wrap("我是真正的netty！".getBytes()));
-
-//        channelFuture.addListener(future -> {
-//            Thread.sleep(3000);
-//            DefaultChannelPromise defaultPromise = (DefaultChannelPromise) future;
-//            defaultPromise.channel().writeAndFlush(ByteBuffer.wrap("我是真正的netty！".getBytes()));
-//        });
-
-
-        Thread.currentThread().join();
     }
 
 }

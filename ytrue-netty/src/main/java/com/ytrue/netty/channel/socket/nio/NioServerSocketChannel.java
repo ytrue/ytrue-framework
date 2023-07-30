@@ -68,7 +68,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel {
 
         log.info("NioServerSocketChannel#doBind 设置全连接队列大小为：{}", config.getBacklog());
         if (isActive()) {
-            System.out.println("服务端绑定端口成功");
+            log.info("服务端绑定端口成功");
             doBeginRead();
         }
     }

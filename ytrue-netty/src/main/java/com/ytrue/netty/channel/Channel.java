@@ -125,6 +125,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker {
      */
     Unsafe unsafe();
 
+    ChannelPipeline pipeline();
+
     interface Unsafe {
         /**
          * 获取当前Channel的本地绑定地址

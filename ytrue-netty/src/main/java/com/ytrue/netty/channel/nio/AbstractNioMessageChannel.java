@@ -1,6 +1,8 @@
 package com.ytrue.netty.channel.nio;
 
 import com.ytrue.netty.channel.Channel;
+import com.ytrue.netty.channel.ChannelConfig;
+import com.ytrue.netty.channel.ChannelPipeline;
 
 import java.nio.channels.SelectableChannel;
 import java.util.ArrayList;
@@ -48,6 +50,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         public void read() {
             //该方法要在netty的线程执行器中执行
             assert eventLoop().inEventLoop(Thread.currentThread());
+            final ChannelConfig config = config();
+            //得到ChannelPipeline
+            final ChannelPipeline pipeline = pipeline();
+
             boolean closed = false;
             Throwable exception = null;
             try {
@@ -65,10 +71,10 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
             int size = readBuf.size();
             for (int i = 0; i < size; i++) {
                 readPending = false;
-                //把每一个客户端的channel注册到工作线程上,这里得不到workgroup，所以我们不在这里实现了，打印一下即可
-                Channel child = (Channel) readBuf.get(i);
-                System.out.println(child + "收到客户端的channel了");
-                //TODO
+                //把每一个客户端的channel注册到工作线程上，还记得ServerBootstrap的内部类ServerBootstrapAcceptor吗？
+                //该类的channelRead方法将被回调，该方法的这行代码childGroup.register(child).addListener()，就会把接收到的
+                //客户端channel以轮询的方式注册到workgroup的单线程执行器中
+                pipeline.fireChannelRead(readBuf.get(i));
             }
             //清除集合
             readBuf.clear();

@@ -2,6 +2,7 @@ package com.ytrue.netty.bootstrap;
 
 import com.ytrue.netty.channel.Channel;
 import com.ytrue.netty.channel.ChannelFactory;
+import com.ytrue.netty.channel.ChannelHandler;
 import com.ytrue.netty.channel.EventLoopGroup;
 import com.ytrue.netty.util.internal.ObjectUtil;
 import com.ytrue.netty.util.internal.StringUtil;
@@ -34,6 +35,10 @@ public class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>, C extend
     @SuppressWarnings("deprecation")
     public final EventLoopGroup group() {
         return bootstrap.group();
+    }
+
+    public final ChannelHandler handler() {
+        return bootstrap.handler();
     }
 
     @Override

@@ -1,10 +1,13 @@
 package com.ytrue.netty.channel.nio;
 
 import com.ytrue.netty.channel.Channel;
+import com.ytrue.netty.channel.ChannelPipeline;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.nio.charset.Charset;
 
 /**
  * @author ytrue
@@ -19,6 +22,7 @@ import java.nio.channels.SelectionKey;
  * 5. 支持零拷贝优化：AbstractNioByteChannel通过使用零拷贝技术，可以在数据传输时避免不必要的内存拷贝操作，提高了数据传输的效率。
  * 总的来说，AbstractNioByteChannel是Netty中用于实现基于NIO的字节流通道的抽象类。它提供了字节流的读写操作，处理读写操作的就绪事件，管理字节流的缓冲区，并支持零拷贝优化。具体的NIO字节流通道实现类可以继承AbstractNioByteChannel，并根据具体需求进行定制。
  */
+@Slf4j
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     public AbstractNioByteChannel(Channel parent, SelectableChannel ch) {
@@ -36,10 +40,20 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
          */
         @Override
         public final void read() {
+            //得到ChannelPipeline
+            final ChannelPipeline pipeline = pipeline();
             //暂时用最原始简陋的方法处理
             ByteBuffer byteBuf = ByteBuffer.allocate(1024);
             try {
-                doReadBytes(byteBuf);
+                int bytes = doReadBytes(byteBuf);
+                //源码中并没有下面这个判断分支，这里这么写是为了再客户端channel关闭的时候，服务端可以不报错。后面我们会逐步完善。
+                if (bytes == -1) {
+                    return;
+                }
+
+                //把数据向后面的handler传递做处理
+                log.info("客户端收到消息:{}", Charset.defaultCharset().decode(byteBuf));
+                pipeline.fireChannelRead(byteBuf);
             } catch (Exception e) {
                 e.printStackTrace();
             }

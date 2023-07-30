@@ -52,6 +52,12 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
 
     /**
+     * 用户设置的ChannelHandler
+     */
+    private volatile ChannelHandler handler;
+
+
+    /**
      * 构造
      *
      * @param bootstrap
@@ -61,7 +67,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         group = bootstrap.group;
         channelFactory = bootstrap.channelFactory;
         localAddress = bootstrap.localAddress;
-
+        handler = bootstrap.handler;
         // 加锁赋值options
         synchronized (bootstrap.options) {
             options.putAll(bootstrap.options);
@@ -71,6 +77,16 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             attrs.putAll(bootstrap.attrs);
         }
     }
+
+    public B handler(ChannelHandler handler) {
+        this.handler = ObjectUtil.checkNotNull(handler, "handler");
+        return self();
+    }
+
+    final ChannelHandler handler() {
+        return handler;
+    }
+
 
     /**
      * 给group赋值

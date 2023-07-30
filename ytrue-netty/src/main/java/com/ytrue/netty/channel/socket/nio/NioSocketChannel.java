@@ -1,12 +1,12 @@
 package com.ytrue.netty.channel.socket.nio;
 
 import com.ytrue.netty.channel.Channel;
-import com.ytrue.netty.channel.ChannelConfig;
 import com.ytrue.netty.channel.ChannelOption;
 import com.ytrue.netty.channel.nio.AbstractNioByteChannel;
 import com.ytrue.netty.channel.socket.DefaultSocketChannelConfig;
 import com.ytrue.netty.channel.socket.SocketChannelConfig;
 import com.ytrue.netty.util.internal.SocketUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -23,6 +23,7 @@ import java.util.Map;
  * @date 2023-07-26 10:37
  * @description 对socketchannel做了一层包装，同时也因为channel接口和抽象类的引入，终于可以使NioEventLoop和channel解耦了
  */
+@Slf4j
 public class NioSocketChannel extends AbstractNioByteChannel {
 
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
@@ -100,13 +101,14 @@ public class NioSocketChannel extends AbstractNioByteChannel {
 
     @Override
     protected int doReadBytes(ByteBuffer byteBuf) throws Exception {
-        // channel 读取到byteBuf中
         int len = javaChannel().read(byteBuf);
-        byte[] buffer = new byte[len];
-        // 设置读模式
+        if (len == -1) {
+            javaChannel().close();
+            return -1;
+        }
+      //  byte[] buffer = new byte[len];
         byteBuf.flip();
-        byteBuf.get(buffer);
-        System.out.println("客户端收到消息:{}" + new String(buffer));
+        //byteBuf.get(buffer);
         //返回读取到的字节长度
         return len;
     }

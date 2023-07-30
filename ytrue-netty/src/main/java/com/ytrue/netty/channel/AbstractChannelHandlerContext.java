@@ -655,6 +655,9 @@ public abstract class AbstractChannelHandlerContext implements ChannelHandlerCon
             } else {
                 next.invokeWrite(m, promise);
             }
+        } else {
+            //下面被注释掉的分支是源码，我们用的这个else分支是我自己写的，等真正讲到WriteAndFlush方法时，我们再讲解源码
+            executor.execute(() -> next.invokeWriteAndFlush(m, promise));
         }
 //        else {
 //            final AbstractWriteTask task;

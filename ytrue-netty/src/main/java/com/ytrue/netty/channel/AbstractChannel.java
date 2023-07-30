@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * @author ytrue
@@ -66,12 +67,30 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     private final Unsafe unsafe;
 
+    /**
+     * pipeline
+     */
+    private final DefaultChannelPipeline pipeline;
+
     protected AbstractChannel(Channel parent) {
         this.parent = parent;
         unsafe = newUnsafe();
         id = newId();
+        pipeline = newChannelPipeline();
     }
 
+
+    protected AbstractChannel(Channel parent, ChannelId id) {
+        this.parent = parent;
+        this.id = id;
+        unsafe = newUnsafe();
+        pipeline = newChannelPipeline();
+    }
+
+    @Override
+    public ChannelPipeline pipeline() {
+        return pipeline;
+    }
 
     @Override
     public ChannelId id() {
@@ -98,6 +117,15 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 //    public ChannelConfig config() {
 //        return null;
 //    }
+
+    /**
+     * 创建Pipeline
+     * @return
+     */
+    protected DefaultChannelPipeline newChannelPipeline() {
+        //把创建出的channel传入DefaultChannelPipeline；
+        return new DefaultChannelPipeline(this);
+    }
 
 
     /**
@@ -148,7 +176,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public Channel read() {
-        unsafe.beginRead();
+        // DefaultChannelPipeline#read--》 最终调用HeadContext#read，而它调用的是 unsafe.beginRead
+        pipeline.read();
         return this;
     }
 
@@ -190,8 +219,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        unsafe.bind(localAddress, promise);
-        return promise;
+        // DefaultChannelPipeline#bind--》 最终调用HeadContext#bind，而它调用的是 unsafe.bind(localAddress, promise);
+        return pipeline.bind(localAddress, promise);
     }
 
     @Override
@@ -201,8 +230,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        unsafe.connect(remoteAddress, localAddress, promise);
-        return promise;
+        // DefaultChannelPipeline#connect--》 最终调用HeadContext#connect，而它调用的是 connect.bind(remoteAddress, promise);
+        return pipeline.connect(remoteAddress, promise);
     }
 
     @Override
@@ -232,9 +261,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture writeAndFlush(Object msg) {
-        DefaultChannelPromise promise = new DefaultChannelPromise(this);
-        unsafe.write(msg, promise);
-        return promise;
+        return pipeline.writeAndFlush(msg);
     }
 
     @Override
@@ -300,6 +327,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * 按照我的这种思路，大家可以思考思考，为什么继承了同样的接口，有的方法可以出现在这个抽象类中，有的方法可以出现在那个抽象类中，为什么有的方法要设计成抽象的
      */
     protected abstract class AbstractUnsafe implements Unsafe {
+
+        private boolean neverRegistered = true;
 
         /**
          * 断言是不是EventLoop
@@ -382,15 +411,35 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (!promise.setUncancellable() || !ensureOpen(promise)) {
                     return;
                 }
+                boolean firstRegistration = neverRegistered;
                 //真正的注册方法
                 doRegister();
                 //修改注册状态
+                neverRegistered = false;
                 registered = true;
+                //回调链表中的方法，链表中的每一个节点都会执行它的run方法，在run方法中
+                //ChannelPipeline中每一个节点中handler的handlerAdded方法，在执行callHandlerAdded的时候，handler的添加状态
+                //更新为ADD_COMPLETE
+                pipeline.invokeHandlerAddedIfNeeded();
                 //把成功状态赋值给promise，这样它可以通知回调函数执行
                 //我们在之前注册时候，把bind也放在了回调函数中
                 safeSetSuccess(promise);
-                //在这里给channel注册读事件
-                beginRead();
+                //channel注册成功后回调每一个handler的channelRegister方法
+                pipeline.fireChannelRegistered();
+                //这里通道还不是激活状态，因为还未绑定端口号，所以下面的分支并不会进入
+                //等绑定了端口号之后，还会执行一次 pipeline.fireChannelActive方法，
+                //这时候每一个handler中的ChannelActive方法将会被回调
+                //如果是服务端接受的客户端channel注册了工作线程组的多路复用器之后，这时候被接受的客户端channel已经是
+                //处于激活状态了，这里是可以回调成功的
+                if (isActive()) {
+                    if (firstRegistration) {
+                        //触发channelActive回调
+                        pipeline.fireChannelActive();
+                    } else if (config().isAutoRead()) {
+                        //在这里有可能无法关注读事件
+                        beginRead();
+                    }
+                }
             } catch (Exception e) {
                 throw new RuntimeException(e.getMessage());
             }
@@ -404,12 +453,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          */
         @Override
         public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
+            //这里一定为false，因为channel还未绑定端口号，肯定不是激活状态
+            boolean wasActive = isActive();
             try {
                 doBind(localAddress);
-                safeSetSuccess(promise);
             } catch (Exception e) {
-                e.printStackTrace();
+                safeSetFailure(promise, e);
             }
+            //这时候一定为true了
+            if (!wasActive && isActive()) {
+                //然后会向单线程执行器中提交任务，任务重会执行ChannelPipeline中每一个节点中handler的ChannelActive方法
+                invokeLater(() -> pipeline.fireChannelActive());
+            }
+
+            safeSetSuccess(promise);
         }
 
         @Override
@@ -445,7 +502,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             try {
                 doBeginRead();
             } catch (final Exception e) {
-                throw new RuntimeException(e.getMessage());
+                //如果出现了异常，就提交异步任务，在任务中抓住异常
+                invokeLater(() -> pipeline.fireExceptionCaught(e));
+                close(closeFuture);
             }
         }
 
@@ -511,6 +570,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         protected final void safeSetFailure(ChannelPromise promise, Throwable cause) {
             if (!promise.tryFailure(cause)) {
                 log.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
+            }
+        }
+
+        private void invokeLater(Runnable task) {
+            try {
+                eventLoop().execute(task);
+            } catch (RejectedExecutionException e) {
+                log.warn("Can't invoke task later as EventLoop rejected it", e);
             }
         }
     }
