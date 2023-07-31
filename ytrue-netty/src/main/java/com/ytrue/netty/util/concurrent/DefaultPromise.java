@@ -1,5 +1,7 @@
 package com.ytrue.netty.util.concurrent;
 
+import com.ytrue.netty.util.internal.StringUtil;
+
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -679,5 +681,55 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         awaitUninterruptibly();
         rethrowIfFailed();
         return this;
+    }
+
+
+    /**
+     * 通知监听器开始执行方法
+     * @param eventExecutor
+     * @param future
+     * @param listener
+     */
+    protected static void notifyListener(EventExecutor eventExecutor, final Future<?> future, final GenericFutureListener<?> listener) {
+        checkNotNull(eventExecutor, "eventExecutor");
+        checkNotNull(future, "future");
+        checkNotNull(listener, "listener");
+        if (eventExecutor.inEventLoop(Thread.currentThread())){
+            //如果执行任务的线程是单线程执行器，那么直接通知监听器执行方法
+            notifyListener0(future, listener);
+        }
+        //如果不是执行器的线程，则包装成runnable，交给执行器去通知监听器执行方法
+        safeExecute(eventExecutor, () -> notifyListener0(future, listener));
+    }
+
+    @Override
+    public String toString() {
+        return toStringBuilder().toString();
+    }
+
+    protected StringBuilder toStringBuilder() {
+        StringBuilder buf = new StringBuilder(64)
+                .append(StringUtil.simpleClassName(this))
+                .append('@')
+                .append(Integer.toHexString(hashCode()));
+
+        Object result = this.result;
+        if (result == SUCCESS) {
+            buf.append("(success)");
+        } else if (result == UNCANCELLABLE) {
+            buf.append("(uncancellable)");
+        } else if (result instanceof CauseHolder) {
+            buf.append("(failure: ")
+                    .append(((CauseHolder) result).cause)
+                    .append(')');
+        } else if (result != null) {
+            buf.append("(success: ")
+                    .append(result)
+                    .append(')');
+        } else {
+            buf.append("(incomplete)");
+        }
+
+        return buf;
     }
 }

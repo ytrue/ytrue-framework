@@ -1,16 +1,15 @@
 package com.ytrue.netty.channel.nio;
 
-import com.ytrue.netty.channel.EventLoopGroup;
 import com.ytrue.netty.channel.EventLoopTaskQueueFactory;
 import com.ytrue.netty.channel.SelectStrategy;
 import com.ytrue.netty.channel.SingleThreadEventLoop;
-import com.ytrue.netty.channel.socket.nio.NioSocketChannel;
 import com.ytrue.netty.util.concurrent.RejectedExecutionHandler;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
-import java.nio.channels.*;
+import java.nio.channels.CancelledKeyException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Iterator;
 import java.util.Queue;
@@ -26,13 +25,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 @Slf4j
 public class NioEventLoop extends SingleThreadEventLoop {
 
-
-    /**
-     * @Author: ytrue
-     * @Description:这个属性是暂时的
-     */
-    @Setter
-    private EventLoopGroup workerGroup;
 
     /**
      * 选择策略
@@ -113,7 +105,7 @@ public class NioEventLoop extends SingleThreadEventLoop {
             //如果没有就绪事件，就在这里阻塞3秒
             int selectedKeys = selector.select(1000);
             //如果有事件或者单线程执行器中有任务待执行，就退出循环
-            if (selectedKeys != 0 || hasTasks()) {
+            if (selectedKeys != 0 || hasTasks() || hasScheduledTasks()) {
                 break;
             }
         }
@@ -184,7 +176,7 @@ public class NioEventLoop extends SingleThreadEventLoop {
                 unsafe.read();
             }
             if (ops == SelectionKey.OP_ACCEPT) {
-                 unsafe.read();
+                unsafe.read();
             }
         } catch (CancelledKeyException ignored) {
             k.cancel();

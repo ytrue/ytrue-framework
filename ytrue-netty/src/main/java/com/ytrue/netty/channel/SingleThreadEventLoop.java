@@ -1,14 +1,10 @@
 package com.ytrue.netty.channel;
 
-import com.ytrue.netty.channel.nio.NioEventLoop;
 import com.ytrue.netty.util.concurrent.RejectedExecutionHandler;
 import com.ytrue.netty.util.concurrent.SingleThreadEventExecutor;
 import com.ytrue.netty.util.internal.ObjectUtil;
 import lombok.extern.slf4j.Slf4j;
 
-import java.nio.channels.SelectionKey;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 

@@ -21,10 +21,10 @@ public class ServerTest {
         ChannelFuture channelFuture = bootstrap.group(bossGroup, workGroup).
                 channel(NioServerSocketChannel.class).
                 handler(new TestHandlerTwo()).
-                option(ChannelOption.SO_BACKLOG,128).
-                childAttr(AttributeKey.valueOf("常量"),10).
+                option(ChannelOption.SO_BACKLOG, 128).
+                childAttr(AttributeKey.valueOf("常量"), 10).
                 childHandler(new TestHandlerOne()).
-                bind(8080).
+                bind(4444).
                 addListener(future -> System.out.println("我绑定成功了")).sync();
     }
 }

@@ -1,6 +1,7 @@
 package com.ytrue.netty.util.concurrent;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -135,6 +136,12 @@ public abstract class MultiThreadEventExecutorGroup extends AbstractEventExecuto
     }
 
 
+
+    @Override
+    public Iterator<EventExecutor> iterator() {
+        return readonlyChildren.iterator();
+    }
+
     @Override
     public EventExecutor next() {
         return chooser.next();
@@ -147,6 +154,62 @@ public abstract class MultiThreadEventExecutorGroup extends AbstractEventExecuto
             l.shutdownGracefully();
         }
     }
+
+
+    @Override
+    @Deprecated
+    public void shutdown() {
+        for (EventExecutor l : children) {
+            l.shutdown();
+        }
+    }
+
+    @Override
+    public boolean isShutdown() {
+        for (EventExecutor l : children) {
+            if (!l.isShutdown()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean isTerminated() {
+        for (EventExecutor l : children) {
+            if (!l.isTerminated()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 等待 ExecutorService 中的所有任务完成，并在指定的超时时间内等待任务的完成。
+     *
+     * @param timeout the maximum time to wait
+     * @param unit    the time unit of the timeout argument
+     * @return
+     * @throws InterruptedException
+     */
+    @Override
+    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        loop:
+        for (EventExecutor l : children) {
+            for (; ; ) {
+                long timeLeft = deadline - System.nanoTime();
+                if (timeLeft <= 0) {
+                    break loop;
+                }
+                if (l.awaitTermination(timeLeft, TimeUnit.NANOSECONDS)) {
+                    break;
+                }
+            }
+        }
+        return isTerminated();
+    }
+
 
     /**
      * 执行器的总数
@@ -168,4 +231,6 @@ public abstract class MultiThreadEventExecutorGroup extends AbstractEventExecuto
     }
 
     protected abstract EventExecutor newChild(Executor executor, Object... args) throws Exception;
+
+
 }

@@ -67,10 +67,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     private final Unsafe unsafe;
 
+
     /**
      * pipeline
      */
     private final DefaultChannelPipeline pipeline;
+
+
+    private final VoidChannelPromise unsafeVoidPromise = new VoidChannelPromise(this, false);
 
     protected AbstractChannel(Channel parent) {
         this.parent = parent;
@@ -120,6 +124,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     /**
      * 创建Pipeline
+     *
      * @return
      */
     protected DefaultChannelPipeline newChannelPipeline() {
@@ -328,6 +333,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
+
         private boolean neverRegistered = true;
 
         /**
@@ -392,7 +398,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     //如果调用该放的线程不是netty的线程，就封装成任务由线程执行器来执行
                     eventLoop.execute(() -> register0(promise));
                 } catch (Throwable t) {
-                    System.out.println(t.getMessage());
                     //该方法先不做实现，等引入unsafe之后会实现
                     //closeForcibly();
                     closeFuture.setClosed();
@@ -434,6 +439,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (isActive()) {
                     if (firstRegistration) {
                         //触发channelActive回调
+                        // 在 HeadContext#channelActive 调用   readIfIsAutoRead(); 绑定读事件
                         pipeline.fireChannelActive();
                     } else if (config().isAutoRead()) {
                         //在这里有可能无法关注读事件
@@ -463,7 +469,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             //这时候一定为true了
             if (!wasActive && isActive()) {
                 //然后会向单线程执行器中提交任务，任务重会执行ChannelPipeline中每一个节点中handler的ChannelActive方法
-                invokeLater(() -> pipeline.fireChannelActive());
+                invokeLater(pipeline::fireChannelActive);
             }
 
             safeSetSuccess(promise);
@@ -579,6 +585,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             } catch (RejectedExecutionException e) {
                 log.warn("Can't invoke task later as EventLoop rejected it", e);
             }
+        }
+
+        @Override
+        public final ChannelPromise voidPromise() {
+            assertEventLoop();
+            return unsafeVoidPromise;
         }
     }
 

@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * 既然是执行器(虽然该执行器中只有一个无限循环的线程工作)，但执行器应该具备的属性也不可少，比如任务队列，拒绝策略等等
  */
 @Slf4j
-public abstract class SingleThreadEventExecutor implements EventExecutor {
+public abstract class SingleThreadEventExecutor extends AbstractScheduledEventExecutor implements EventExecutor {
 
 
     /**
@@ -84,6 +84,12 @@ public abstract class SingleThreadEventExecutor implements EventExecutor {
     private final RejectedExecutionHandler rejectedExecutionHandler;
 
 
+    private long lastExecutionTime;
+
+    private static final Runnable WAKEUP_TASK = () -> {
+        // Do nothing.
+    };
+
     /**
      * @param parent          执行器组
      * @param executor        执行器
@@ -91,13 +97,7 @@ public abstract class SingleThreadEventExecutor implements EventExecutor {
      * @param taskQueue       任务队列
      * @param rejectedHandler 拒绝策略
      */
-    protected SingleThreadEventExecutor(
-            EventExecutorGroup parent,
-            Executor executor,
-            boolean addTaskWakesUp,
-            Queue<Runnable> taskQueue,
-            RejectedExecutionHandler rejectedHandler
-    ) {
+    protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor, boolean addTaskWakesUp, Queue<Runnable> taskQueue, RejectedExecutionHandler rejectedHandler) {
         //暂时在这里赋值
         this.parent = parent;
         this.addTaskWakesUp = addTaskWakesUp;
@@ -173,23 +173,52 @@ public abstract class SingleThreadEventExecutor implements EventExecutor {
 
 
     /**
-     * 执行任务
+     * 取出过期的任务，加入任务队列里面去
      *
-     * @param task
+     * @return
      */
-    private void safeExecute(Runnable task) {
-        try {
-            task.run();
-        } catch (Throwable t) {
-            log.warn("TASK RAISED AN Throwable Task {}", task, t);
+    private boolean fetchFromScheduledTaskQueue() {
+        long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+        //从定时任务队列中取出即将到期执行的定时任务
+        Runnable scheduledTask = pollScheduledTask(nanoTime);
+
+        while (scheduledTask != null) {
+            //把取出的定时任务方法普通任务队列中
+            //当添加失败的时候，则把该任务重新放回定时任务队列中
+            if (!taskQueue.offer(scheduledTask)) {
+                scheduledTaskQueue().add((ScheduledFutureTask<?>) scheduledTask);
+                return false;
+            }
+            scheduledTask = pollScheduledTask(nanoTime);
         }
+        return true;
     }
+
 
     /**
      * 执行队列所有任务
      */
-    protected void runAllTasks() {
-        runAllTaskFrom(taskQueue);
+    protected boolean runAllTasks() {
+        assert inEventLoop(Thread.currentThread());
+        boolean fetchedAll;
+        boolean ranAtLeastOne = false;
+        do {
+            //把到期的定时任务从任务队列取出放到普通任务队列中
+            fetchedAll = fetchFromScheduledTaskQueue();
+            //执行任务队列中的任务，该方法返回true，则意味着至少执行了一个任务
+            if (runAllTasksFrom(taskQueue)) {
+                //给该变量赋值为true
+                ranAtLeastOne = true;
+            }
+            //没有可执行的定时任务时，就退出该循环
+        } while (!fetchedAll);
+
+        if (ranAtLeastOne) {
+            lastExecutionTime = ScheduledFutureTask.nanoTime();
+        }
+        //执行尾部队列任务，这里还暂不实现
+        //afterRunningAllTasks();
+        return ranAtLeastOne;
     }
 
     /**
@@ -197,20 +226,19 @@ public abstract class SingleThreadEventExecutor implements EventExecutor {
      *
      * @param taskQueue
      */
-    protected void runAllTaskFrom(Queue<Runnable> taskQueue) {
-        // 从任务对立中拉取任务,如果第一次拉取就为null，说明任务队列中没有任务，直接返回即可
+    protected final boolean runAllTasksFrom(Queue<Runnable> taskQueue) {
+        //从普通任务队列中拉取异步任务
         Runnable task = pollTaskFrom(taskQueue);
         if (task == null) {
-            return;
+            return false;
         }
-
-        while (true) {
-            // 执行任务队列中的任务
+        for (; ; ) {
+            //Reactor线程执行异步任务
             safeExecute(task);
-            // 执行完毕之后，拉取下一个任务，如果为null就直接返回
+            //执行完毕拉取下一个，如果是null，则直接返回
             task = pollTaskFrom(taskQueue);
             if (task == null) {
-                return;
+                return true;
             }
         }
     }
@@ -234,8 +262,14 @@ public abstract class SingleThreadEventExecutor implements EventExecutor {
      * @return
      */
     protected static Runnable pollTaskFrom(Queue<Runnable> taskQueue) {
-        //  移除并返问队列头部的元素    如果队列为空，则返回null
-        return taskQueue.poll();
+        for (; ; ) {
+            Runnable task = taskQueue.poll();
+            // 等于空的就是跳过
+            if (task == WAKEUP_TASK) {
+                continue;
+            }
+            return task;
+        }
     }
 
     /**
@@ -309,10 +343,20 @@ public abstract class SingleThreadEventExecutor implements EventExecutor {
     }
 
 
-
     @Override
     public void shutdownGracefully() {
 
+    }
+
+    @Override
+    @Deprecated
+    public void shutdown() {
+
+    }
+
+    @Override
+    public boolean isShutdown() {
+        return false;
     }
 
     @Override
@@ -320,8 +364,19 @@ public abstract class SingleThreadEventExecutor implements EventExecutor {
         return false;
     }
 
-    @Override
-    public void awaitTermination(Integer integer, TimeUnit timeUnit) throws InterruptedException{
 
+    @Override
+    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+        return isTerminated();
+    }
+
+
+    protected Runnable pollTask() {
+        assert inEventLoop(Thread.currentThread());
+        return pollTaskFrom(taskQueue);
+    }
+
+    public int pendingTasks() {
+        return taskQueue.size();
     }
 }

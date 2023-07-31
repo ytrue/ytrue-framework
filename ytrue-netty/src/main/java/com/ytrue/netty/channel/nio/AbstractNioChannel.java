@@ -1,14 +1,15 @@
 package com.ytrue.netty.channel.nio;
 
-import com.ytrue.netty.channel.AbstractChannel;
-import com.ytrue.netty.channel.Channel;
-import com.ytrue.netty.channel.ChannelPromise;
-import com.ytrue.netty.channel.EventLoop;
+import com.ytrue.netty.channel.*;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.SocketAddress;
+import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author ytrue
@@ -43,6 +44,11 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * 是否还有未读取的数据
      */
     boolean readPending;
+
+
+    private ChannelPromise connectPromise;
+    private ScheduledFuture<?> connectTimeoutFuture;
+    private SocketAddress requestedRemoteAddress;
 
     public AbstractNioChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
         super(parent);
@@ -150,41 +156,121 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         @Override
         public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            //查看通道是否打开
+            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+                return;
+            }
+
             try {
-                boolean doConnect = doConnect(remoteAddress, localAddress);
-                if (!doConnect) {
-                    //在这里直接就唤醒的话，也许客户端的channel还没连接成功，在源码中并不是这样处理的，源码中有一个定时任务
-                    //定时任务的时间到了之后会去检查连接是否成功了没，成功了才会让客户端程序继续向下运行，后面我们会进一步完善代码
-                    //把这里注释了，然后阻塞住主线程，反而可以发送成功，这说明就是这里出的问题，所以，好好想想，问题出在哪里。
-                    //没错，认真想想netty的线程模型，如果在这里threadsleep，阻塞的究竟是谁呢？是单线程执行器，因为这个方法本身就在被单线程
-                    //执行器执行了，所以在这里阻塞是没用的。阻塞在这里，就意味着单线程执行器不能继续工作，不能select.selector，无法处理关注的事件
-                    //自然也就无法真正的连接成功。那么只要这里阻塞的时间一过，执行器就会继续执行，然后设置成功状态，主线程继续向下执行，可这时候执行器也许
-                    //刚开始下一轮select.selector，然后处理连接事件，所以就会又一次发送消息失败
-                    //粗暴地在客户端代码中阻塞主线程，这样即留给了单线程执行器循环下一轮时间，主线程阻塞3秒后会自动醒来，那时候
-                    //一切都准备就绪，可以发送消息了
-                    //那么源码中是怎么做的呢？作者使用了一个定时任务，经过一定的时间后，定时任务被单线程执行器执行，在定时任务中，作者采取了一些步骤去检验
-                    //客户端有没有连接成功，成功的话就把一并传进定时任务的promise设置为成功状态，然后调用了sync()方法的主线程就被唤醒，而且一切准备就绪，
-                    //可以直接发送数据喽。
-                    //Thread.sleep(3000);
-                    promise.trySuccess();
+                //该值不为空，说明已经有连接存在了，不能再次连接
+                if (connectPromise != null) {
+                    throw new ConnectionPendingException();
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+                //现在还不是活跃状态
+                boolean wasActive = isActive();
+                //这里会返回false
+                if (doConnect(remoteAddress, localAddress)) {
+                    fulfillConnectPromise(promise, wasActive);
+                } else {
+                    //可以为本次连接设置定时任务，检查是否连接超时了
+                    connectPromise = promise;
+                    requestedRemoteAddress = remoteAddress;
+
+                    //这个getConnectTimeoutMillis是用户在客户端启动时配置的参数，如果没有配置，肯定会有一个默认的
+                    //默认的超时时间是30s
+                    int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                    if (connectTimeoutMillis > 0) {
+                        //创建一个超时任务，如果在限定时间内没被取消，就去执行该任务，说明连接超时了，然后关闭channel
+                        //在finishConnect()和doClose()中，该任务会被取消。就是连接完成或者通道关闭了，不需要再去检测了。
+                        connectTimeoutFuture = eventLoop().schedule(() -> {
+                            ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
+                            // 创建连接异常
+                            ConnectException cause = new ConnectException("connection timed out: " + remoteAddress);
+                            // 这里去尝试设置失败
+                            if (connectPromise != null && connectPromise.tryFailure(cause)) {
+                                //走到这里意味着连接超时，通道就会关闭
+                                close(voidPromise());
+                            }
+                        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+
+                    }
+
+                    // 监听器处理
+                    promise.addListener((ChannelFutureListener) future -> {
+                        //监听器，判断该future是否被取消了，如果被取消了，那就取消该定时任务，然后关闭channel
+                        if (future.isCancelled()) {
+                            if (connectTimeoutFuture != null) {
+                                connectTimeoutFuture.cancel(false);
+                            }
+                            connectPromise = null;
+                            close(voidPromise());
+                        }
+                    });
+
+                }
+
+            } catch (Throwable t) {
+                promise.tryFailure(t);
+                closeIfClosed();
             }
         }
 
 
         /**
-         * 暂时不做实现,现在要实现这个方法了，仍然是简单实现，以后会完善至源码的程度
+         * 不是打开的就关闭掉
+         */
+        protected final void closeIfClosed() {
+            if (isOpen()) {
+                return;
+            }
+            close(voidPromise());
+        }
+
+        /**
+         * 完成连接
+         *
+         * @param promise
+         * @param wasActive
+         */
+        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+            // 校验
+            if (promise == null) {
+                return;
+            }
+            // 获取活跃状态，这时候是成功的
+            boolean active = isActive();
+            // 设置成功
+            boolean promiseSet = promise.trySuccess();
+
+            if (!wasActive && active) {
+                // 调用流水线激活事件
+                pipeline().fireChannelActive();
+            }
+
+            if (!promiseSet) {
+                close(voidPromise());
+            }
+        }
+
+        /**
+         * 在要实现这个方法了，仍然是简单实现，以后会完善至源码的程度
          */
         @Override
         public final void finishConnect() {
             assert eventLoop().inEventLoop(Thread.currentThread());
             try {
-                //真正处理连接完成的方法
+                //这里返回是false
+                boolean wasActive = isActive();
                 doFinishConnect();
-            } catch (Exception e) {
-                e.printStackTrace();
+                fulfillConnectPromise(connectPromise, wasActive);
+            } catch (Throwable t) {
+                //fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
+            } finally {
+                //检查是否为null，如果不等于null，则说明创建定时任务了，这时候已经连接完成，只要取消该任务就行
+                if (connectTimeoutFuture != null) {
+                    connectTimeoutFuture.cancel(false);
+                }
+                connectPromise = null;
             }
         }
 

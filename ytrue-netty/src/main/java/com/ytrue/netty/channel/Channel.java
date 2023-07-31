@@ -218,5 +218,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker {
          */
         void flush();
 
+
+        ChannelPromise voidPromise();
     }
 }
