@@ -2,9 +2,11 @@ package com.ytrue.netty.test;
 
 import com.ytrue.netty.bootstrap.ServerBootstrap;
 import com.ytrue.netty.channel.ChannelFuture;
+import com.ytrue.netty.channel.ChannelInitializer;
 import com.ytrue.netty.channel.ChannelOption;
 import com.ytrue.netty.channel.nio.NioEventLoopGroup;
 import com.ytrue.netty.channel.socket.nio.NioServerSocketChannel;
+import com.ytrue.netty.channel.socket.nio.NioSocketChannel;
 import com.ytrue.netty.util.AttributeKey;
 
 import java.io.IOException;
@@ -23,7 +25,12 @@ public class ServerTest {
                 handler(new TestHandlerTwo()).
                 option(ChannelOption.SO_BACKLOG, 128).
                 childAttr(AttributeKey.valueOf("常量"), 10).
-                childHandler(new TestHandlerOne()).
+                childHandler(new ChannelInitializer<NioSocketChannel>() {
+                    @Override
+                    protected void initChannel(NioSocketChannel ch) throws Exception {
+                        ch.pipeline().addLast(new TestHandlerOne());
+                    }
+                }).
                 bind(4444).
                 addListener(future -> System.out.println("我绑定成功了")).sync();
     }

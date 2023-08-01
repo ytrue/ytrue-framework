@@ -60,6 +60,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
      */
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("我先触发的");
         if (ctx.channel().isRegistered()) {
             if (initChannel(ctx)) {
                 //初始化channel完毕后，需要从initMap删除该handler
