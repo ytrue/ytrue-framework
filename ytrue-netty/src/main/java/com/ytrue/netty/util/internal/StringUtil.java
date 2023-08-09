@@ -13,7 +13,7 @@ import java.util.List;
 public final class StringUtil {
 
     public static final String EMPTY_STRING = "";
-    //public static final String NEWLINE = SystemPropertyUtil.get("line.separator", "\n");
+    public static final String NEWLINE = SystemPropertyUtil.get("line.separator", "\n");
 
     public static final char DOUBLE_QUOTE = '\"';
     public static final char COMMA = ',';

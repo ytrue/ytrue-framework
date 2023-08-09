@@ -11,7 +11,7 @@ import java.nio.charset.Charset;
 public class TestHandlerOne extends ChannelInboundHandlerAdapter {
 
     /**
-     * @Author: PP-jessica
+     * @Author: ytrue
      * @Description:验证一下我们这节课着重讲解的回调方法，根据我们讲解的内容，应该是handlerAdded方法最先被回调，因为当服务端channel
      * 注册到单线程执行器成功的那一刻， pipeline.invokeHandlerAddedIfNeeded()就会被执行，接着会执行pipeline.fireChannelRegistered();
      * 最后，在NioServerSocketChannel绑定端口号成功之后，执行pipeline.fireChannelActive();，表明通channel被激活了
