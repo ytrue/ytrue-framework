@@ -108,6 +108,27 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         return loop instanceof NioEventLoop;
     }
 
+    protected final void clearReadPending() {
+        if (isRegistered()) {
+            EventLoop eventLoop = eventLoop();
+            if (eventLoop.inEventLoop(Thread.currentThread())) {
+                clearReadPending0();
+            } else {
+                eventLoop.execute(clearReadPendingRunnable);
+            }
+        } else {
+            readPending = false;
+        }
+    }
+
+    private final Runnable clearReadPendingRunnable = this::clearReadPending0;
+
+
+    private void clearReadPending0() {
+        readPending = false;
+        ((AbstractNioUnsafe) unsafe()).removeReadOp();
+    }
+
     /**
      * 获取NioUnsafe
      *
@@ -148,6 +169,22 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      * 终于又引入了一个unsafe的抽象内部类
      */
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe {
+
+
+        /**
+         * @Author: PP-jessica
+         * @Description:从感兴趣的集合中删除读事件
+         */
+        protected final void removeReadOp() {
+            SelectionKey key = selectionKey();
+            if (!key.isValid()) {
+                return;
+            }
+            int interestOps = key.interestOps();
+            if ((interestOps & readInterestOp) != 0) {
+                key.interestOps(interestOps & ~readInterestOp);
+            }
+        }
 
         @Override
         public SelectableChannel ch() {

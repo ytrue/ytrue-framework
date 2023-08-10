@@ -127,7 +127,15 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker {
 
     ChannelPipeline pipeline();
 
+
+    ChannelMetadata metadata();
+
     interface Unsafe {
+
+        //这个是新增加的方法，用于得到动态字节分配器
+        RecvByteBufAllocator.Handle recvBufAllocHandle();
+
+
         /**
          * 获取当前Channel的本地绑定地址
          *

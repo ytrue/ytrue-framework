@@ -1,5 +1,6 @@
 package com.ytrue.netty.channel.socket.nio;
 
+import com.ytrue.netty.channel.ChannelMetadata;
 import com.ytrue.netty.channel.ChannelOption;
 import com.ytrue.netty.channel.nio.AbstractNioMessageChannel;
 import com.ytrue.netty.channel.nio.NioEventLoop;
@@ -25,6 +26,8 @@ import java.util.Map;
  */
 @Slf4j
 public class NioServerSocketChannel extends AbstractNioMessageChannel {
+
+    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
@@ -78,6 +81,10 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel {
         return isOpen() && javaChannel().socket().isBound();
     }
 
+    @Override
+    public ChannelMetadata metadata() {
+        return METADATA;
+    }
 
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {

@@ -303,6 +303,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract boolean isCompatible(EventLoop loop);
 
+
+
+
     /**
      * 创建channelId
      *
@@ -333,6 +336,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
+        //在这里终于出现了动态字节分配器
+        private RecvByteBufAllocator.Handle recvHandle;
+
 
         private boolean neverRegistered = true;
 
@@ -341,6 +347,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          */
         private void assertEventLoop() {
             assert !registered || eventLoop.inEventLoop(Thread.currentThread());
+        }
+
+
+        /**
+         * @Author: PP-jessica
+         * @Description:该方法返回动态内存分配的处理器
+         */
+        @Override
+        public RecvByteBufAllocator.Handle recvBufAllocHandle() {
+            if (recvHandle == null) {
+                recvHandle = config().getRecvByteBufAllocator().newHandle();
+            }
+            return recvHandle;
         }
 
         /**
@@ -661,6 +680,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
         return exception;
     }
+
+
 
     /**
      * CloseFuture

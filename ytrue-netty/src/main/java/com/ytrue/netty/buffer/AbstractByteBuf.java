@@ -2,6 +2,8 @@ package com.ytrue.netty.buffer;
 
 import com.ytrue.netty.util.ByteProcessor;
 import com.ytrue.netty.util.CharsetUtil;
+import com.ytrue.netty.util.ResourceLeakDetector;
+import com.ytrue.netty.util.ResourceLeakDetectorFactory;
 import com.ytrue.netty.util.internal.PlatformDependent;
 import com.ytrue.netty.util.internal.StringUtil;
 import com.ytrue.netty.util.internal.SystemPropertyUtil;
@@ -61,6 +63,14 @@ public abstract class AbstractByteBuf extends ByteBuf {
         checkPositiveOrZero(maxCapacity, "maxCapacity");
         this.maxCapacity = maxCapacity;
     }
+
+    //这个属性是静态的，说明只创建一次，并且只有一个，然后用该成员变量去创建真正的ResourceLeakTracker
+    //这就意味着所有的ByteBuf用的都是同一个弱引用队列
+    //实际上，用户每创建一个bytebuf，都会把这个bytebuf包装成一个可检测内存泄漏的bytebuf，而在包装的过程中，会从弱引用队列中
+    //检查，看是之前创建的bytebuf是否内存泄漏了，泄露了就打印一下报告
+    //这里这个方法就是返回一个内存泄漏探测器，这个探测器会为每个bytebuf创建一个专有的弱引用对象，用来检测内存是否泄漏
+    static final ResourceLeakDetector<ByteBuf> leakDetector =
+            ResourceLeakDetectorFactory.instance().newResourceLeakDetector(ByteBuf.class);
 
     @Override
     public boolean isReadOnly() {

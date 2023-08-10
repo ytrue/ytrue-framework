@@ -1,12 +1,13 @@
 package com.ytrue.netty.channel;
 
+import com.ytrue.netty.buffer.ByteBufAllocator;
+
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static com.ytrue.netty.channel.ChannelOption.*;
-import static com.ytrue.netty.util.internal.ObjectUtil.checkPositive;
-import static com.ytrue.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static com.ytrue.netty.util.internal.ObjectUtil.*;
 
 /**
  * @author ytrue
@@ -56,15 +57,26 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile boolean autoClose = true;
 
 
-    /**
-     * 构造
-     *
-     * @param channel
-     */
+
+
+    //这个属性就是内存分配器，在Netty中，可以通过channel的配置类得到内存分配器，也可以自己直接用PooledByteBufAllocator.DEFAULT
+    //来创建一个池化的直接内存分配器。
+    private volatile ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
+    //动态内存分配器添加进来了，当然这个分配器并不真正的分配内存，而是经过计算得到一个应该分配的内存值，最终的内存分配还是由上面的内存
+    //分配器来分配
+    private volatile RecvByteBufAllocator rcvBufAllocator;
+
+
     public DefaultChannelConfig(Channel channel) {
-        this.channel = channel;
+        //在这里创建了动态的内存分配器，这个动态内存分配器可以根据每次接收到的字节大小动态调整ByteBuf要申请的内存大小
+        this(channel, new AdaptiveRecvByteBufAllocator());
     }
 
+    protected DefaultChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
+        // channel.metadata()这行代码会设置服务端channel每次接收的客户端连接的最大值，为16。
+        setRecvByteBufAllocator(allocator, channel.metadata());
+        this.channel = channel;
+    }
 
     @Override
     @SuppressWarnings("deprecation")
@@ -223,5 +235,48 @@ public class DefaultChannelConfig implements ChannelConfig {
     @Override
     public int getWriteBufferLowWaterMark() {
         return 0;
+    }
+
+
+
+
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T extends RecvByteBufAllocator> T getRecvByteBufAllocator() {
+        return (T) rcvBufAllocator;
+    }
+
+    @Override
+    public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        rcvBufAllocator = checkNotNull(allocator, "allocator");
+        return this;
+    }
+
+    private void setRecvByteBufAllocator(RecvByteBufAllocator allocator, ChannelMetadata metadata) {
+        //判断allocator类型
+        if (allocator instanceof MaxMessagesRecvByteBufAllocator) {
+            //走到这个分支，设置最大次数16
+            ((MaxMessagesRecvByteBufAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
+        } else if (allocator == null) {
+            throw new NullPointerException("allocator");
+        }
+        //设置了动态内存分配器
+        setRecvByteBufAllocator(allocator);
+    }
+
+
+    @Override
+    public ByteBufAllocator getAllocator() {
+        return allocator;
+    }
+
+    @Override
+    public ChannelConfig setAllocator(ByteBufAllocator allocator) {
+        if (allocator == null) {
+            throw new NullPointerException("allocator");
+        }
+        this.allocator = allocator;
+        return this;
     }
 }

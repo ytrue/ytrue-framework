@@ -1,6 +1,8 @@
 package com.ytrue.netty.buffer;
 
 import com.ytrue.netty.util.NettyRuntime;
+import com.ytrue.netty.util.ResourceLeakDetector;
+import com.ytrue.netty.util.ResourceLeakTracker;
 import com.ytrue.netty.util.concurrent.EventExecutor;
 import com.ytrue.netty.util.concurrent.FastThreadLocal;
 import com.ytrue.netty.util.concurrent.FastThreadLocalThread;
@@ -382,10 +384,50 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 //                    new UnpooledDirectByteBuf(this, initialCapacity, maxCapacity);
 //        }
         //将ByteBuf包装一下，可以检测内存是否泄漏。这里其实就是把Buf放进另一种Buf中
-        //return toLeakAwareBuffer(buf);
-        return buf;
+        //这里终于可以放开注释了，把创建的PooledDirectByteBuf包装了一下
+        //根据设置的检测内存泄漏的级别，返回不同的包装对象
+        //注意啊，这里只要是创建了一个PooledDirectByteBuf，那这个ByteBuf就会被放到一个弱引用对象中，
+        //也就是说，随着一个ByteBuf的创建，弱引用对象也就创建了。当然，当ByteBuf正确释放的时候，弱引用对象会清除对ByteBuf的弱引用，这样一来，弱引用对象在
+        //垃圾回收时也不会被放进弱引用队列中，也就不会被打印报告了
+        //在toLeakAwareBuffer方法中，buf会赋值给ResourceLeakTracker对象的referent属性
+        //完成弱引用对象对PooledDirectByteBuf的引用
+        return toLeakAwareBuffer(buf);
     }
 
+
+    //在这里，我还是要啰嗦几句，为大家详细解释一下，内存泄露是怎么发生的，以及会如何被检测到
+    //首先，在netty中如果使用的是非池化的堆内存，则是不需要关注内存泄露的，因为垃圾回收机制会为我们自动回收内存
+    //但是如果使用的是可池化的直接内存，学完内存池，大家应该对这些内存都有清楚的认识了，使用的如果是这样的内存，就不得不关注内存泄露了。
+    //因为这样的内存要不然就要放到内存池，要不然就要归还给Chunk，总之，在持有这块内存的Bytebuf做完操作后，一定要对这块直接内存做出相应的
+    //操作，保证这块内存还可以被再次利用。这时候问题就来了，我们使用的是可池化的直接内存，但是包装这块直接内存的Bytebuf使用的可并不是直接内存
+    //而是堆内存，既然是堆内存，就会被垃圾回收机制掌控如果ByteBuf被垃圾回收了，但是该Bytebuf持有的内存却并未释放，这就会造成内存泄露问题
+    //所以要怎么做？把ByteBuf交给弱引用对象，如果ByteBuf被垃圾回收了，但是弱引用对象中的ByteBuf引用并没有被清除，那该弱引用对象就会被放到
+    //一个弱引用队列中，Netty就可以检查该弱引用队列来判断是否出现内存泄漏了。只有被包装过ByteBuf执行了release方法，才会讲自身从对应的
+    //弱引用对象中清除，这样被垃圾回收后弱引用对象也不会被放到弱引用队列中。而在执行release方法的过程中，还会释放自身持有的内存。由此做到了内存泄漏的检测
+    protected static ByteBuf toLeakAwareBuffer(ByteBuf buf) {
+        ResourceLeakTracker<ByteBuf> leak;
+        //获取配置的内存泄漏检测级别，根据不同的级别会返回
+        //不同的ByteBuf包装类，即下面的SimpleLeakAwareByteBuf
+        //或者AdvancedLeakAwareByteBuf
+        switch (ResourceLeakDetector.getLevel()) {
+            case SIMPLE:
+                leak = AbstractByteBuf.leakDetector.track(buf);
+                if (leak != null) {
+                    buf = new SimpleLeakAwareByteBuf(buf, leak);
+                }
+                break;
+            case ADVANCED:
+            case PARANOID:
+                leak = AbstractByteBuf.leakDetector.track(buf);
+                if (leak != null) {
+                    buf = new AdvancedLeakAwareByteBuf(buf, leak);
+                }
+                break;
+            default:
+                break;
+        }
+        return buf;
+    }
 
     public static int defaultNumHeapArena() {
         return DEFAULT_NUM_HEAP_ARENA;

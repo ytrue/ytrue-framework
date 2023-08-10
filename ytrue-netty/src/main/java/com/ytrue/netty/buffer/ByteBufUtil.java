@@ -17,6 +17,8 @@ import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.Locale;
 
+import static com.ytrue.netty.util.internal.StringUtil.isSurrogate;
+
 /**
  * @author ytrue
  * @date 2023-08-07 11:30

@@ -1,5 +1,7 @@
 package com.ytrue.netty.channel;
 
+import com.ytrue.netty.buffer.ByteBufAllocator;
+
 import java.util.Map;
 
 /**
@@ -128,4 +130,23 @@ public interface ChannelConfig {
      * @return
      */
     ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
+
+
+    /**
+     * 动态内存分配器终于也添加进来了
+     * @return
+     * @param <T>
+     */
+    <T extends RecvByteBufAllocator> T getRecvByteBufAllocator();
+
+    ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator);
+
+
+    /**
+     * 内存分配器终于添加进来了
+     * @return
+     */
+    ByteBufAllocator getAllocator();
+
+    ChannelConfig setAllocator(ByteBufAllocator allocator);
 }

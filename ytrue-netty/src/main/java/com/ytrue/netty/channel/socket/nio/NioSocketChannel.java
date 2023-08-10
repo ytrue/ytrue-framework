@@ -1,7 +1,10 @@
 package com.ytrue.netty.channel.socket.nio;
 
+import com.ytrue.netty.buffer.ByteBuf;
 import com.ytrue.netty.channel.Channel;
+import com.ytrue.netty.channel.ChannelMetadata;
 import com.ytrue.netty.channel.ChannelOption;
+import com.ytrue.netty.channel.RecvByteBufAllocator;
 import com.ytrue.netty.channel.nio.AbstractNioByteChannel;
 import com.ytrue.netty.channel.socket.DefaultSocketChannelConfig;
 import com.ytrue.netty.channel.socket.SocketChannelConfig;
@@ -100,17 +103,21 @@ public class NioSocketChannel extends AbstractNioByteChannel {
     }
 
     @Override
-    protected int doReadBytes(ByteBuffer byteBuf) throws Exception {
-        int len = javaChannel().read(byteBuf);
-        if (len == -1) {
-            javaChannel().close();
-            return -1;
-        }
-      //  byte[] buffer = new byte[len];
-        byteBuf.flip();
-        //byteBuf.get(buffer);
-        //返回读取到的字节长度
-        return len;
+    protected int doReadBytes(ByteBuf byteBuf) throws Exception {
+        //得到动态内存分配器的处理器
+        final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+
+        //这里先得到ByteBuf的可写字节数，然后将这个可写字节数赋值给处理器中的attemptedBytesRead属性
+        //为什么要这么做？因为最后读取到的字节数和这个可以入的字节数相等了，说明这次读取数据已经满了，ByteBuf已经装不下数据了
+        //但是这并不意味着channel中就没有可读取的数据了，这只能说明这个ByteBuf没办法再写入数据了
+        //如果是另一种结果，就是最后读取到的字节数小于这个可写入的字节数，说明channel中的数据已经全部读取完了
+        //总之，这个属性被赋值了，就可以很容易判断出读取了之后，客户端channel中是否还有数据可以被读取
+        //这个byteBuf.writableBytes()的可写入字节数每次都是会变化的，这个要弄清楚
+        allocHandle.attemptedBytesRead(byteBuf.writableBytes());
+
+        //在这里把客户端channel和可写的字节数传进方法内，数据是要从客户端channel中写入到ByteBuf中的
+        //这里就会把数据从channel写到ByteBuf中了
+        return byteBuf.writeBytes(javaChannel(), allocHandle.attemptedBytesRead());
     }
 
     @Override
@@ -154,6 +161,8 @@ public class NioSocketChannel extends AbstractNioByteChannel {
     public InetSocketAddress remoteAddress() {
         return (InetSocketAddress) super.remoteAddress();
     }
+
+
 
     @Override
     protected SocketAddress localAddress0() {
