@@ -1,11 +1,10 @@
 package com.ytrue.netty.channel;
 
-import com.ytrue.netty.util.Attribute;
-import com.ytrue.netty.util.AttributeKey;
-import com.ytrue.netty.util.ResourceLeakHint;
+import com.ytrue.netty.util.*;
 import com.ytrue.netty.util.concurrent.EventExecutor;
 import com.ytrue.netty.util.internal.ObjectUtil;
 import com.ytrue.netty.util.internal.StringUtil;
+import com.ytrue.netty.util.internal.SystemPropertyUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
@@ -472,8 +471,7 @@ public abstract class AbstractChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public ChannelFuture connect(
-            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+    public ChannelFuture connect(final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
 
         if (remoteAddress == null) {
             throw new NullPointerException("remoteAddress");
@@ -643,33 +641,53 @@ public abstract class AbstractChannelHandlerContext implements ChannelHandlerCon
 
     private void write(Object msg, boolean flush, ChannelPromise promise) {
         ObjectUtil.checkNotNull(msg, "msg");
-        final AbstractChannelHandlerContext next = findContextOutbound(flush ?
-                (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
-        final Object m = msg;
-        //该方法用来检查内存是否泄漏，因为还未引入，所以暂时注释掉
-        //final Object m = pipeline.touch(msg, next);
+
+
+        ObjectUtil.checkNotNull(msg, "msg");
+        try {
+            if (isNotValidPromise(promise, true)) {
+                ReferenceCountUtil.release(msg);
+                return;
+            }
+        } catch (RuntimeException e) {
+            ReferenceCountUtil.release(msg);
+            throw e;
+        }
+
+
+        //在这里根据flush的值寻找可以处理write事件的handler或者是寻找可以处理write和flush事件的handler
+        final AbstractChannelHandlerContext next = findContextOutbound(flush ? (MASK_WRITE | MASK_FLUSH) : MASK_WRITE);
+        //这里的这个方法实际上会根据内存泄露检测级别，决定是否记录此处的ByteBuf的调用轨迹。
+        final Object m = pipeline.touch(msg, next);
+
         EventExecutor executor = next.executor();
+        //判断当前线程是否为单线程执行器
         if (executor.inEventLoop(Thread.currentThread())) {
+            //如果是单线程执行器，并且flush为true，就直接执行下面这个方法
             if (flush) {
                 next.invokeWriteAndFlush(m, promise);
             } else {
+                //如果true为false，就执行下面这个方法
                 next.invokeWrite(m, promise);
             }
         } else {
-            //下面被注释掉的分支是源码，我们用的这个else分支是我自己写的，等真正讲到WriteAndFlush方法时，我们再讲解源码
-            executor.execute(() -> next.invokeWriteAndFlush(m, promise));
+            //走到这里说明不是单线程执行器，现在就可以封装一个task了，然后把task提交给单线程执行器去执行即可
+            final AbstractWriteTask task;
+            if (flush) {
+                //根据flush的值封装WriteAndFlushTask或者是WriteTask
+                //这里封装的是WriteAndFlushTask
+                task = WriteAndFlushTask.newInstance(next, m, promise);
+            } else {
+                //这里封装的是WriteTask
+                //注意，WriteAndFlushTask和WriteTask类其实都继承了runnable，都是可以被线程执行的异步任务
+                task = WriteTask.newInstance(next, m, promise);
+            }
+            //把上面封装好的异步任务提交到单线程执行器中
+            if (!safeExecute(executor, task, promise, m)) {
+                //如果提交失败了，就取消这个任务
+                task.cancel();
+            }
         }
-//        else {
-//            final AbstractWriteTask task;
-//            if (flush) {
-//                task = WriteAndFlushTask.newInstance(next, m, promise);
-//            }  else {
-//                task = WriteTask.newInstance(next, m, promise);
-//            }
-//            if (!safeExecute(executor, task, promise, m)) {
-//                task.cancel();
-//            }
-//        }
     }
 
     private void invokeWrite(Object msg, ChannelPromise promise) {
@@ -730,6 +748,7 @@ public abstract class AbstractChannelHandlerContext implements ChannelHandlerCon
 
     @Override
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+        // 这里会发现write中的flush设置为true
         write(msg, true, promise);
         return promise;
     }
@@ -779,7 +798,7 @@ public abstract class AbstractChannelHandlerContext implements ChannelHandlerCon
             } finally {
                 if (msg != null) {
                     //当该引用计数减至为0时，该ByteBuf即可回收，我们还未讲到这里，所以我先注释掉这个方法
-                    //ReferenceCountUtil.release(msg);
+                    ReferenceCountUtil.release(msg);
                 }
             }
             return false;
@@ -803,15 +822,13 @@ public abstract class AbstractChannelHandlerContext implements ChannelHandlerCon
             throw new IllegalArgumentException("promise already done: " + promise);
         }
         if (promise.channel() != channel()) {
-            throw new IllegalArgumentException(String.format(
-                    "promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
+            throw new IllegalArgumentException(String.format("promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
         }
         if (promise.getClass() == DefaultChannelPromise.class) {
             return false;
         }
         if (promise instanceof AbstractChannel.CloseFuture) {
-            throw new IllegalArgumentException(
-                    StringUtil.simpleClassName(AbstractChannel.CloseFuture.class) + " not allowed in a pipeline");
+            throw new IllegalArgumentException(StringUtil.simpleClassName(AbstractChannel.CloseFuture.class) + " not allowed in a pipeline");
         }
         return false;
     }
@@ -1023,6 +1040,177 @@ public abstract class AbstractChannelHandlerContext implements ChannelHandlerCon
     @Override
     public String toString() {
         return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel() + ')';
+    }
+
+
+    /**
+     * 这是个抽象父类，其子类会被真正用到
+     */
+    abstract static class AbstractWriteTask implements Runnable {
+
+        private static final boolean ESTIMATE_TASK_SIZE_ON_SUBMIT =
+                SystemPropertyUtil.getBoolean("io.netty.transport.estimateSizeOnSubmit", true);
+
+        private static final int WRITE_TASK_OVERHEAD =
+                SystemPropertyUtil.getInt("io.netty.transport.writeTaskSizeOverhead", 48);
+
+        private final Recycler.Handle<AbstractWriteTask> handle;
+        private AbstractChannelHandlerContext ctx;
+        private Object msg;
+        private ChannelPromise promise;
+        private int size;
+
+        @SuppressWarnings("unchecked")
+        private AbstractWriteTask(Recycler.Handle<? extends AbstractWriteTask> handle) {
+            this.handle = (Recycler.Handle<AbstractWriteTask>) handle;
+        }
+
+        protected static void init(AbstractWriteTask task, AbstractChannelHandlerContext ctx,
+                                   Object msg, ChannelPromise promise) {
+            task.ctx = ctx;
+            task.msg = msg;
+            task.promise = promise;
+
+            if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
+                task.size = ctx.pipeline.estimatorHandle().size(msg) + WRITE_TASK_OVERHEAD;
+                ctx.pipeline.incrementPendingOutboundBytes(task.size);
+            } else {
+                task.size = 0;
+            }
+        }
+
+        @Override
+        public final void run() {
+            try {
+                decrementPendingOutboundBytes();
+                write(ctx, msg, promise);
+            } finally {
+                recycle();
+            }
+        }
+
+        void cancel() {
+            try {
+                decrementPendingOutboundBytes();
+            } finally {
+                recycle();
+            }
+        }
+
+        private void decrementPendingOutboundBytes() {
+            if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
+                ctx.pipeline.decrementPendingOutboundBytes(size);
+            }
+        }
+
+        private void recycle() {
+            // Set to null so the GC can collect them directly
+            ctx = null;
+            msg = null;
+            promise = null;
+            handle.recycle(this);
+        }
+
+        protected void write(AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            ctx.invokeWrite(msg, promise);
+        }
+    }
+
+
+    /**
+     * @Author: ytrue
+     * @Description:这个类用来封装write方法
+     */
+    static final class WriteTask extends AbstractWriteTask implements SingleThreadEventLoop.NonWakeupRunnable {
+
+        private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
+            @Override
+            protected WriteTask newObject(Handle<WriteTask> handle) {
+                return new WriteTask(handle);
+            }
+        };
+        //这里用到了对象池，为什么要用到对象池呢？
+        //因为在Netty构建的服务端和客户端，主要作用就是不停地收发消息，所以，如果发送消息的操作如果是业务线程发起的，是不是就要频繁地
+        //封装WriteTask了？所以可以用对象池优化，提高性能
+        static WriteTask newInstance(
+                AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            WriteTask task = RECYCLER.get();
+            init(task, ctx, msg, promise);
+            return task;
+        }
+
+        private WriteTask(Recycler.Handle<WriteTask> handle) {
+            super(handle);
+        }
+    }
+
+    /**
+     * @Author: ytrue
+     * @Description:这个类是用来封装WriteAndFlushTask的
+     */
+    static final class WriteAndFlushTask extends AbstractWriteTask {
+
+        private static final Recycler<WriteAndFlushTask> RECYCLER = new Recycler<WriteAndFlushTask>() {
+            @Override
+            protected WriteAndFlushTask newObject(Handle<WriteAndFlushTask> handle) {
+                return new WriteAndFlushTask(handle);
+            }
+        };
+
+        //用对象池的原因同上
+        static WriteAndFlushTask newInstance(
+                AbstractChannelHandlerContext ctx, Object msg,  ChannelPromise promise) {
+            WriteAndFlushTask task = RECYCLER.get();
+            init(task, ctx, msg, promise);
+            return task;
+        }
+
+        private WriteAndFlushTask(Recycler.Handle<WriteAndFlushTask> handle) {
+            super(handle);
+        }
+
+        @Override
+        public void write(AbstractChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            super.write(ctx, msg, promise);
+            ctx.invokeFlush();
+        }
+    }
+
+    /**
+     * @Author: ytrue
+     * @Description:这个task是给多个方法使用的，封装其为异步任务
+     */
+    private static final class Tasks {
+        private final AbstractChannelHandlerContext next;
+        private final Runnable invokeChannelReadCompleteTask = new Runnable() {
+            @Override
+            public void run() {
+                next.invokeChannelReadComplete();
+            }
+        };
+        private final Runnable invokeReadTask = new Runnable() {
+            @Override
+            public void run() {
+                next.invokeRead();
+            }
+        };
+        private final Runnable invokeChannelWritableStateChangedTask = new Runnable() {
+            @Override
+            public void run() {
+                next.invokeChannelWritabilityChanged();
+            }
+        };
+        //在这里，封装为runnable了，然后执行了invokeFlush方法
+        private final Runnable invokeFlushTask = new Runnable() {
+            @Override
+            public void run() {
+                next.invokeFlush();
+            }
+        };
+
+        Tasks(AbstractChannelHandlerContext next) {
+            this.next = next;
+        }
     }
 
 }

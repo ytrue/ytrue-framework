@@ -30,7 +30,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
     }
 
     /**
-     * @Author: PP-jessica
+     * @Author: ytrue
      * @Description:该方法在DefaultChannelConfig的setRecvByteBufAllocator方法内会被调用，然后maxMessagesPerRead这个属性
      * 就会被赋值为16了
      */
@@ -88,7 +88,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         };
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:重置接收次数和总字节的方法
          */
         @Override
@@ -100,7 +100,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         }
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:初次分配容量的方法
          */
         @Override
@@ -110,7 +110,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         }
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:累加接收到的客户端连接次数，如果是读取客户端channel的数据，则表示读取了多少次了
          */
         @Override
@@ -120,7 +120,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         }
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:本次读取到的字节数，这个字节数会累加到接收到的总的字节数中
          */
         @Override
@@ -138,7 +138,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         }
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:判断是否还要继续读取数据
          */
         @Override
@@ -147,7 +147,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         }
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:这个方法用来判断是否还要继续读下去，也就是接收客户端连接或者是接收客户端发送过来的数据
          * 该方法只要返回true，就可以继续在循环中读取数据了，但是达到什么条件就可以返回true了呢？首先要保证
          * totalMessages < maxMessagePerRead成立，也就是接收连接或者读取消息的次数是小于16次的
@@ -185,7 +185,7 @@ public abstract class DefaultMaxMessagesRecvByteBufAllocator implements MaxMessa
         }
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:返回读取到的总的字节数
          */
         protected final int totalBytesRead() {

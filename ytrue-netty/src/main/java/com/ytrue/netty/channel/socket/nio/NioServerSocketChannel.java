@@ -2,6 +2,7 @@ package com.ytrue.netty.channel.socket.nio;
 
 import com.ytrue.netty.channel.ChannelMetadata;
 import com.ytrue.netty.channel.ChannelOption;
+import com.ytrue.netty.channel.ChannelOutboundBuffer;
 import com.ytrue.netty.channel.nio.AbstractNioMessageChannel;
 import com.ytrue.netty.channel.nio.NioEventLoop;
 import com.ytrue.netty.channel.socket.DefaultServerSocketChannelConfig;
@@ -202,5 +203,11 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel {
             return ((NioServerSocketChannel) channel).javaChannel();
         }
     }
+
+    @Override
+    protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
 
 }

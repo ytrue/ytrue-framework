@@ -5,6 +5,7 @@ import com.ytrue.netty.buffer.ByteBufAllocator;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static com.ytrue.netty.channel.ChannelOption.*;
 import static com.ytrue.netty.util.internal.ObjectUtil.*;
@@ -224,19 +225,58 @@ public class DefaultChannelConfig implements ChannelConfig {
 
     @Override
     public ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        return null;
+        checkPositiveOrZero(writeBufferLowWaterMark, "writeBufferLowWaterMark");
+        for (;;) {
+            WriteBufferWaterMark waterMark = writeBufferWaterMark;
+            if (writeBufferLowWaterMark > waterMark.high()) {
+                throw new IllegalArgumentException(
+                        "writeBufferLowWaterMark cannot be greater than " +
+                        "writeBufferHighWaterMark (" + waterMark.high() + "): " +
+                        writeBufferLowWaterMark);
+            }
+            if (WATERMARK_UPDATER.compareAndSet(this, waterMark,
+                    new WriteBufferWaterMark(writeBufferLowWaterMark, waterMark.high(), false))) {
+                return this;
+            }
+        }
     }
+
+
+    /**
+     * 更新水位线的原子更新器
+     */
+    private static final AtomicReferenceFieldUpdater<DefaultChannelConfig, WriteBufferWaterMark> WATERMARK_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    DefaultChannelConfig.class, WriteBufferWaterMark.class, "writeBufferWaterMark");
 
     @Override
     public ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        return null;
+        checkPositiveOrZero(writeBufferHighWaterMark, "writeBufferHighWaterMark");
+        for (;;) {
+            WriteBufferWaterMark waterMark = writeBufferWaterMark;
+            if (writeBufferHighWaterMark < waterMark.low()) {
+                throw new IllegalArgumentException(
+                        "writeBufferHighWaterMark cannot be less than " +
+                        "writeBufferLowWaterMark (" + waterMark.low() + "): " +
+                        writeBufferHighWaterMark);
+            }
+            if (WATERMARK_UPDATER.compareAndSet(this, waterMark,
+                    new WriteBufferWaterMark(waterMark.low(), writeBufferHighWaterMark, false))) {
+                return this;
+            }
+        }
     }
 
     @Override
     public int getWriteBufferLowWaterMark() {
-        return 0;
+        return writeBufferWaterMark.low();
     }
 
+
+    @Override
+    public int getWriteBufferHighWaterMark() {
+        return writeBufferWaterMark.high();
+    }
 
 
 
@@ -277,6 +317,47 @@ public class DefaultChannelConfig implements ChannelConfig {
             throw new NullPointerException("allocator");
         }
         this.allocator = allocator;
+        return this;
+    }
+
+
+    /**
+     * 水位线属性终于引入进来了，高水位线为64KB，低水位线为32KB
+     */
+    private volatile WriteBufferWaterMark writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
+
+    /**
+     * 这里得到的MessageSizeEstimator类型的对象，这个对象创建的handle，是用来计算要发送的消息的大小的
+     */
+    private static final MessageSizeEstimator DEFAULT_MSG_SIZE_ESTIMATOR = DefaultMessageSizeEstimator.DEFAULT;
+
+    /**
+     * 计算要发送消息大小的辅助对象也引入了
+     */
+    private volatile MessageSizeEstimator msgSizeEstimator = DEFAULT_MSG_SIZE_ESTIMATOR;
+
+    @Override
+    public ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+        this.writeBufferWaterMark = checkNotNull(writeBufferWaterMark, "writeBufferWaterMark");
+        return this;
+    }
+
+    @Override
+    public WriteBufferWaterMark getWriteBufferWaterMark() {
+        return writeBufferWaterMark;
+    }
+
+    @Override
+    public MessageSizeEstimator getMessageSizeEstimator() {
+        return msgSizeEstimator;
+    }
+
+    @Override
+    public ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+        if (estimator == null) {
+            throw new NullPointerException("estimator");
+        }
+        msgSizeEstimator = estimator;
         return this;
     }
 }

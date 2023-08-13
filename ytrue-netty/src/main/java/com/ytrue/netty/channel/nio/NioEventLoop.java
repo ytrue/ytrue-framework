@@ -166,6 +166,11 @@ public class NioEventLoop extends SingleThreadEventLoop {
                 //这里要做真正的客户端连接处理
                 unsafe.finishConnect();
             }
+            //如果是write事件
+            if ((ops & SelectionKey.OP_WRITE) != 0) {
+                //这里就会执行强制刷新的方法，就会把消息从写缓冲区中刷新到socket中
+                unsafe.forceFlush();
+            }
             //如果是读事件，不管是客户端还是服务端的，都可以直接调用read方法
             //这时候一定要记清楚，NioSocketChannel和NioServerSocketChannel并不会纠缠
             //用户创建的是哪个channel，这里抽象类调用就是它的方法

@@ -12,6 +12,8 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.charset.Charset;
 
+import static com.ytrue.netty.util.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
+
 /**
  * @author ytrue
  * @date 2023-07-26 10:29
@@ -55,6 +57,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     /**
      * 是否中斷讀
+     *
      * @param config
      * @return
      */
@@ -66,7 +69,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         return config instanceof SocketChannelConfig &&
                ((SocketChannelConfig) config).isAllowHalfClosure();
     }
-
 
 
     protected class NioByteUnsafe extends AbstractNioUnsafe {
@@ -189,7 +191,144 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     protected abstract int doReadBytes(ByteBuf buf) throws Exception;
 
     @Override
-    protected void doWrite(Object msg) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        // 16
+        int writeSpinCount = config().getWriteSpinCount();
 
+        do {
+            Object msg = in.current();
+            if (msg == null) {
+                clearOpWrite();
+                return;
+            }
+            writeSpinCount -= doWriteInternal(in, msg);
+        } while (writeSpinCount > 0);
+        incompleteWrite(writeSpinCount < 0);
     }
+
+
+    //提交给单线程执行器一个异步任务，用于刷新缓冲区
+    private final Runnable flushTask = () -> ((AbstractNioUnsafe) unsafe()).flush0();
+
+    /**
+     * 给多路复用器注册write事件的方法
+     *
+     * @param setOpWrite
+     */
+    protected final void incompleteWrite(boolean setOpWrite) {
+        if (setOpWrite) {
+            //如果setOpWrite为true，就直接向多路复用器注册wirte事件即可
+            setOpWrite();
+        } else {
+            //这里就是达到了16次写次数，但是socket缓冲区依然是可写的情况，这时候就不会注册write事件，而是封装一个flsuh的异步任务
+            //提交给单线程执行器去执行
+            //这里之所以要先清除write事件，是为了防止程序是从NioEventLoop中的unsafe方法调用了forceFlush走到这里的
+            //如果是从NioEventLoop检测到write事件再次走到这里的话，当然就要把write事件移除了，因为现在的情况是socket缓冲区可写了
+            clearOpWrite();
+            //这里就是提交了一个异步任务，在异步任务中执行了 ((AbstractNioUnsafe) unsafe()).flush0()方法
+            //这里也再次反映出了单线程执行器的均衡性，不会把自己交给一个channel无限执行它的发送消息任务
+            eventLoop().execute(flushTask);
+        }
+    }
+
+    /**
+     * 向多路复用器注册write事件
+     */
+    protected final void setOpWrite() {
+        final SelectionKey key = selectionKey();
+        if (!key.isValid()) {
+            return;
+        }
+        final int interestOps = key.interestOps();
+        if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+            key.interestOps(interestOps | SelectionKey.OP_WRITE);
+        }
+    }
+
+    /**
+     * 把监听的write事件从selector上取消掉
+     */
+    protected final void clearOpWrite() {
+        final SelectionKey key = selectionKey();
+        if (!key.isValid()) {
+            return;
+        }
+        final int interestOps = key.interestOps();
+        if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+            key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+        }
+    }
+
+
+    /**
+     * 在该方法内判断要发送的是什么类型的数据，然后返回int整数
+     * @param in
+     * @param msg
+     * @return
+     * @throws Exception
+     */
+    private int doWriteInternal(ChannelOutboundBuffer in, Object msg) throws Exception {
+        if (msg instanceof ByteBuf) {
+            ByteBuf buf = (ByteBuf) msg;
+            if (!buf.isReadable()) {
+                in.remove();
+                return 0;
+            }
+
+            //这里把消息从ByteBuf中直接发送到ScoketChannel中
+            //注意哦，这里使用的是ByteBuf，并不是ByteBuffer
+            final int localFlushedAmount = doWriteBytes(buf);
+            if (localFlushedAmount > 0) {
+                //返回值大于0说明发送成功了
+                in.progress(localFlushedAmount);
+                if (!buf.isReadable()) {
+                    in.remove();
+                }
+                //这里返回1，指的是发送成功了要返回1，这个1会被写次数减去，这样写次数就从最开始的16变成15，就意味着发送了一次数据
+                return 1;
+            }
+        } else if (msg instanceof FileRegion) {
+            //走到这里意味着要发送文件类型的数据
+            //这个FileRegion我并没有引入实现类，只引入了一个接口
+            //这个不是我们的重点，了解一下就行
+            FileRegion region = (FileRegion) msg;
+            if (region.transferred() >= region.count()) {
+                //这里就是发送成功了
+                in.remove();
+                //返回0，意味着这次发送并不算作写次数之中
+                return 0;
+            }
+            //零拷贝的方式传输文件类型数据
+            long localFlushedAmount = doWriteFileRegion(region);
+            if (localFlushedAmount > 0) {
+                //走到这里就是发送成功的意思
+                in.progress(localFlushedAmount);
+                if (region.transferred() >= region.count()) {
+                    //走到这里就是发送成功的意思
+                    //删除写缓冲区中的链表的首节点
+                    in.remove();
+                }
+                return 1;
+            }
+        } else {
+            throw new Error();
+        }
+        //走到这里，就意味着localFlushedAmount返回值小于0，说明socket缓冲区满了，不可写，
+        //直接返回一个WRITE_STATUS_SNDBUF_FULL值，这个值非常大，写次数减去它后就变成负数了
+        //这个负数是有用的，在NioScoketChannel类中会讲到
+        return WRITE_STATUS_SNDBUF_FULL;
+    }
+
+    protected final int doWrite0(ChannelOutboundBuffer in) throws Exception {
+        Object msg = in.current();
+        if (msg == null) {
+            return 0;
+        }
+        //在这里得到写缓冲区中第一个要发送的数据
+        return doWriteInternal(in, in.current());
+    }
+
+    protected abstract long doWriteFileRegion(FileRegion region) throws Exception;
+
+    protected abstract int doWriteBytes(ByteBuf buf) throws Exception;
 }

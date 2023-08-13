@@ -5,6 +5,7 @@ import com.ytrue.netty.channel.*;
 import java.io.IOException;
 import java.net.PortUnreachableException;
 import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -137,7 +138,50 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     protected abstract int doReadMessages(List<Object> buf) throws Exception;
 
     @Override
-    protected void doWrite(Object msg) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+        final SelectionKey key = selectionKey();
+        final int interestOps = key.interestOps();
 
+        for (;;) {
+            Object msg = in.current();
+            if (msg == null) {
+                // Wrote all messages.
+                if ((interestOps & SelectionKey.OP_WRITE) != 0) {
+                    key.interestOps(interestOps & ~SelectionKey.OP_WRITE);
+                }
+                break;
+            }
+            try {
+                boolean done = false;
+                for (int i = config().getWriteSpinCount() - 1; i >= 0; i--) {
+                    if (doWriteMessage(msg, in)) {
+                        done = true;
+                        break;
+                    }
+                }
+
+                if (done) {
+                    in.remove();
+                } else {
+                    if ((interestOps & SelectionKey.OP_WRITE) == 0) {
+                        key.interestOps(interestOps | SelectionKey.OP_WRITE);
+                    }
+                    break;
+                }
+            } catch (Exception e) {
+                if (continueOnWriteError()) {
+                    in.remove(e);
+                } else {
+                    throw e;
+                }
+            }
+        }
     }
+
+
+    protected boolean continueOnWriteError() {
+        return false;
+    }
+
+    protected abstract boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception;
 }

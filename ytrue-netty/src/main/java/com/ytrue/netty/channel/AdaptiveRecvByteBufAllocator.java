@@ -57,7 +57,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
 
 
     /**
-     * @Author: PP-jessica
+     * @Author: ytrue
      * @Description:在扩缩容的容量表中查找到最小大于等于initial的容量
      * 这就是纯粹的逻辑运算，大家自己搞一搞吧，经过了内存池那一章，我已经厌烦了这些数学运算。。
      */
@@ -100,7 +100,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         private boolean decreaseNow;
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:构造函数
          */
         HandleImpl(int minIndex, int maxIndex, int initial) {
@@ -113,7 +113,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         }
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:记录本次接收到的字节的大小
          */
         @Override
@@ -128,7 +128,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         }
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:分配下一次要使用的内存大小，如果是第一次分配，则使用默认值1024来分配
          * 第二次分配就不会使用默认值了，而是使用经过计算的值
          */
@@ -139,7 +139,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
 
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:决定是扩容还是缩容的方法
          * actualReadBytes是本次读取到的客户端的总字节数如果这个字节数直接就大于nextReceiveBufferSize这个下一次要分配的内存容量了
          * 说明现在的ByteBuf很可能分配的有点小，所以要开始扩容，根据扩容步长，得到要扩容的容量大小
@@ -149,7 +149,8 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
             //读取到的总字节数比当前容量缩容后的容量还小，考虑缩容
             if (actualReadBytes <= SIZE_TABLE[max(0, index - INDEX_DECREMENT - 1)]) {
                 //这时候decreaseNow可能还初始化，所以为false，所以进入下面的分支，把decreaseNow设为true
-                //等下一次读取到的字节数仍然很少，这时候就可以真正的扩容了。因为decreaseNow已经被置为true了
+                //等下一次读取到的字节数仍然很少，这时候就可以真正的扩容了。因为decreaseNow已经被
+                //置为true了
                 if (decreaseNow) {
                     index = max(index - INDEX_DECREMENT, minIndex);
                     nextReceiveBufferSize = SIZE_TABLE[index];
@@ -167,7 +168,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
         }
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:记录本次读取到的客户端消息的总的字节数
          */
         @Override
@@ -178,7 +179,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
     }
 
     /**
-     * @Author: PP-jessica
+     * @Author: ytrue
      * @Description:这三个属性会在下面的构造方法中被赋值
      */
     private final int minIndex;
@@ -187,7 +188,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
 
 
     /**
-     * @Author: PP-jessica
+     * @Author: ytrue
      * @Description:AdaptiveRecvByteBufAllocator类的构造方法
      */
     public AdaptiveRecvByteBufAllocator() {
@@ -195,7 +196,7 @@ public class AdaptiveRecvByteBufAllocator extends DefaultMaxMessagesRecvByteBufA
     }
 
     /**
-     * @Author: PP-jessica
+     * @Author: ytrue
      * @Description:在该构造方法中，属性被初始化了，也就是赋值了
      */
     public AdaptiveRecvByteBufAllocator(int minimum, int initial, int maximum) {

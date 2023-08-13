@@ -1,14 +1,18 @@
 package com.ytrue.netty.channel;
 
+import com.ytrue.netty.util.ReferenceCountUtil;
+import com.ytrue.netty.util.ResourceLeakDetector;
 import com.ytrue.netty.util.concurrent.EventExecutor;
 import com.ytrue.netty.util.concurrent.EventExecutorGroup;
 import com.ytrue.netty.util.internal.ObjectUtil;
 import com.ytrue.netty.util.internal.StringUtil;
+import com.ytrue.netty.util.internal.UnstableApi;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * @author ytrue
@@ -221,7 +225,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         if (handlers == null) {
             throw new NullPointerException("handlers");
         }
-        for (ChannelHandler h: handlers) {
+        for (ChannelHandler h : handlers) {
             if (h == null) {
                 break;
             }
@@ -476,7 +480,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NullPointerException("handler");
         }
         AbstractChannelHandlerContext ctx = head.next;
-        for (;;) {
+        for (; ; ) {
             if (ctx == null) {
                 return null;
             }
@@ -493,7 +497,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             throw new NullPointerException("handlerType");
         }
         AbstractChannelHandlerContext ctx = head.next;
-        for (;;) {
+        for (; ; ) {
             if (ctx == null) {
                 return null;
             }
@@ -509,7 +513,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final List<String> names() {
         List<String> list = new ArrayList<>();
         AbstractChannelHandlerContext ctx = head.next;
-        for (;;) {
+        for (; ; ) {
             if (ctx == null) {
                 return list;
             }
@@ -522,7 +526,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final Map<String, ChannelHandler> toMap() {
         Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>();
         AbstractChannelHandlerContext ctx = head.next;
-        for (;;) {
+        for (; ; ) {
             if (ctx == tail) {
                 return map;
             }
@@ -543,7 +547,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 .append(StringUtil.simpleClassName(this))
                 .append('{');
         AbstractChannelHandlerContext ctx = head.next;
-        for (;;) {
+        for (; ; ) {
             if (ctx == tail) {
                 break;
             }
@@ -729,7 +733,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         //return new FailedChannelFuture(channel, null, cause);
         return null;
     }
-
 
 
     final void invokeHandlerAddedIfNeeded() {
@@ -934,11 +937,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (removed) {
                 fireExceptionCaught(new ChannelPipelineException(
                         ctx.handler().getClass().getName() +
-                                ".handlerAdded() has thrown an exception; removed.", t));
+                        ".handlerAdded() has thrown an exception; removed.", t));
             } else {
                 fireExceptionCaught(new ChannelPipelineException(
                         ctx.handler().getClass().getName() +
-                                ".handlerAdded() has thrown an exception; also failed to remove.", t));
+                        ".handlerAdded() has thrown an exception; also failed to remove.", t));
             }
         }
     }
@@ -1033,7 +1036,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             if (!h.isSharable() && h.added) {
                 throw new ChannelPipelineException(
                         h.getClass().getName() +
-                                " is not a @Sharable handler, so can't be added or removed multiple times.");
+                        " is not a @Sharable handler, so can't be added or removed multiple times.");
             }
             h.added = true;
         }
@@ -1062,7 +1065,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private void destroyUp(AbstractChannelHandlerContext ctx, boolean inEventLoop) {
         final Thread currentThread = Thread.currentThread();
         final AbstractChannelHandlerContext tail = this.tail;
-        for (;;) {
+        for (; ; ) {
             if (ctx == tail) {
                 destroyDown(currentThread, tail.prev, inEventLoop);
                 break;
@@ -1081,7 +1084,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void destroyDown(Thread currentThread, AbstractChannelHandlerContext ctx, boolean inEventLoop) {
         final AbstractChannelHandlerContext head = this.head;
-        for (;;) {
+        for (; ; ) {
             if (ctx == head) {
                 break;
             }
@@ -1101,6 +1104,49 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             inEventLoop = false;
         }
     }
+
+
+    //启用内存泄露检查
+    private final boolean touch = ResourceLeakDetector.isEnabled();
+
+    /**
+     * 检测内存泄露的方法,这里实际上会根据msg属于哪种类型的ByteBuf，然后再决定是否记录调用轨迹
+     *
+     * @param msg
+     * @param next
+     * @return
+     */
+    final Object touch(Object msg, AbstractChannelHandlerContext next) {
+        return touch ? ReferenceCountUtil.touch(msg, next) : msg;
+    }
+
+    private volatile MessageSizeEstimator.Handle estimatorHandle;
+
+
+    /**
+     * estimatorHandle对象的原子更新器，这个对象就是用来计算要发送的消息的大小的，其实就是ByteBuf的大小
+     * 并且这个对象是在channel的配置类中被初始化的
+     */
+    private static final AtomicReferenceFieldUpdater<DefaultChannelPipeline, MessageSizeEstimator.Handle> ESTIMATOR =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    DefaultChannelPipeline.class, MessageSizeEstimator.Handle.class, "estimatorHandle");
+
+    /**
+     * 新添加的方法，得到一个处理器，这个处理器可以计算要发送的消息的大小
+     *
+     * @return
+     */
+    final MessageSizeEstimator.Handle estimatorHandle() {
+        MessageSizeEstimator.Handle handle = estimatorHandle;
+        if (handle == null) {
+            handle = channel.config().getMessageSizeEstimator().newHandle();
+            if (!ESTIMATOR.compareAndSet(this, null, handle)) {
+                handle = estimatorHandle;
+            }
+        }
+        return handle;
+    }
+
 
     /**
      * 头节点即是出站处理器，又是入站处理器
@@ -1176,6 +1222,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void flush(ChannelHandlerContext ctx) {
+            //HeadContext中才是Netty真正处理flush事件的地方，这说明flush事件也会从后向前传递，是个出站事件，
+            //一路传递到头节点，在头节点中调用unsafe类的flush方法，这时候调用逻辑就重新回到channel中了
             unsafe.flush();
         }
 
@@ -1325,7 +1373,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             log.debug(
                     "Discarded inbound message {} that reached at the tail of the pipeline. " +
-                            "Please check your pipeline configuration.", msg);
+                    "Please check your pipeline configuration.", msg);
         } finally {
             //当该引用计数减至为0时，该ByteBuf即可回收，我们还未讲到这里，所以我先注释掉这个方法
             //ReferenceCountUtil.release(msg);
@@ -1336,7 +1384,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         try {
             log.warn(
                     "An exceptionCaught() event was fired, and it reached at the tail of the pipeline. " +
-                            "It usually means the last handler in the pipeline did not handle the exception.",
+                    "It usually means the last handler in the pipeline did not handle the exception.",
                     cause);
         } finally {
             //ReferenceCountUtil.release(cause);
@@ -1356,6 +1404,23 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
 
     protected void onUnhandledChannelWritabilityChanged() {
+    }
+
+
+    @UnstableApi
+    protected void incrementPendingOutboundBytes(long size) {
+        ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
+        if (buffer != null) {
+            buffer.incrementPendingOutboundBytes(size);
+        }
+    }
+
+    @UnstableApi
+    protected void decrementPendingOutboundBytes(long size) {
+        ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
+        if (buffer != null) {
+            buffer.decrementPendingOutboundBytes(size);
+        }
     }
 
     /**
@@ -1428,11 +1493,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     if (log.isWarnEnabled()) {
                         log.warn(
                                 "Can't invoke handlerRemoved() as the EventExecutor {} rejected it," +
-                                        " removing handler {}.", executor, ctx.name(), e);
+                                " removing handler {}.", executor, ctx.name(), e);
                     }
                     ctx.setRemoved();
                 }
             }
         }
     }
+
+
+
 }

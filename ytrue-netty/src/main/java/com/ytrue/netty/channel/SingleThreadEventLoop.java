@@ -80,4 +80,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         promise.channel().unsafe().register(this, promise);
         return promise;
     }
+
+
+    interface NonWakeupRunnable extends Runnable { }
 }

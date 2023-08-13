@@ -228,5 +228,9 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker {
 
 
         ChannelPromise voidPromise();
+
+
+        //写缓冲区终于引入进来了
+        ChannelOutboundBuffer outboundBuffer();
     }
 }

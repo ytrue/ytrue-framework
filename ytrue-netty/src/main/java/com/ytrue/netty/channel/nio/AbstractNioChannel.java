@@ -172,7 +172,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
 
         /**
-         * @Author: PP-jessica
+         * @Author: ytrue
          * @Description:从感兴趣的集合中删除读事件
          */
         protected final void removeReadOp() {
@@ -312,10 +312,36 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         /**
-         * 暂时不做实现
+         * @Author:ytrue
+         * @Description:这个方法会在封装的flushTask中被调用，也就意味着这个方法是在socket可写的情况下被调用的 和注册的write事件是冲突的。所以下面才会判断，如果注册了write事件，就不会调用 super.flush0()
+         * 没有注册write事件，才会执行这个异步任务，刷新数据到socket缓冲区中
+         */
+        @Override
+        protected final void flush0() {
+            //判断有没有注册write事件，没有注册才会继续向下执行
+            if (!isFlushPending()) {
+                super.flush0();
+            }
+        }
+
+
+        /**
+         * @Author:ytrue
+         * @Description:该方法用来判断是否有数据待刷新，就是是否注册了write事件
+         */
+        private boolean isFlushPending() {
+            SelectionKey selectionKey = selectionKey();
+            return selectionKey.isValid() && (selectionKey.interestOps() & SelectionKey.OP_WRITE) != 0;
+        }
+
+
+        /**
+         * 强制刷新消息的方法，当selector接收到write事件时，就会调用这个方法，强制把写缓冲区的消息刷新到socket中
+         * 这里其实还是会调用父类的flush0方法
          */
         @Override
         public final void forceFlush() {
+            super.flush0();
         }
 
 

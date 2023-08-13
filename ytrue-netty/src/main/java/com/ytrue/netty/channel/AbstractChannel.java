@@ -1,10 +1,13 @@
 package com.ytrue.netty.channel;
 
 import com.ytrue.netty.util.DefaultAttributeMap;
+import com.ytrue.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.RejectedExecutionException;
 
 /**
@@ -256,13 +259,14 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture write(Object msg) {
-        return null;
+        return pipeline.write(msg);
     }
 
     @Override
     public ChannelFuture write(Object msg, ChannelPromise promise) {
-        return null;
+        return pipeline.write(msg, promise);
     }
+
 
     @Override
     public ChannelFuture writeAndFlush(Object msg) {
@@ -271,22 +275,23 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return null;
+        return pipeline.writeAndFlush(msg, promise);
     }
+
 
     @Override
     public ChannelPromise newPromise() {
-        return null;
+        return pipeline.newPromise();
     }
 
     @Override
     public ChannelFuture newSucceededFuture() {
-        return null;
+        return pipeline.newSucceededFuture();
     }
 
     @Override
     public ChannelFuture newFailedFuture(Throwable cause) {
-        return null;
+        return pipeline.newFailedFuture(cause);
     }
     // ChannelOutboundInvoker 接口方法结束
 
@@ -302,8 +307,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @return
      */
     protected abstract boolean isCompatible(EventLoop loop);
-
-
 
 
     /**
@@ -351,7 +354,30 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
 
         /**
-         * @Author: PP-jessica
+         * 写缓冲区终于引入进来了，写缓冲区的功能就是保存channel要发送的数据。为什么不直接发送，而要先保存再发送呢？
+         * 因为在netty中，单线程执行器要做很多事，不仅要执行各种事件的方法，比如write，flush，bind，read，register等等，还要执行
+         * 用户提交的各种异步任务，定时任务等等。所以这里使用了一个缓冲区，如果要发送消息，可以先调用write方法，把消息放到写缓冲区中
+         * 然后在合适的时机再调用flush，把消息发送到socket中。
+         * 但是这里也要注意，每一个channel其实都会对应一个写缓冲区，所以这就决定了写缓冲区的高写水位线不可能太高，如果太高的话，并发情况下
+         * 每个channel都要向写缓冲区中存放太多msg，会占用很多内存的
+         * 注意哦，这个写缓冲区和socket中的缓冲区并不是一回事，这个要弄清楚
+         * 还有，这个写缓冲区内部实际上使用Entry链表来存储待刷新的消息的
+         */
+        private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
+
+        private boolean inFlush0;
+
+        /**
+         * @Author: ytrue
+         * @Description:返回写缓冲区
+         */
+        @Override
+        public final ChannelOutboundBuffer outboundBuffer() {
+            return outboundBuffer;
+        }
+
+        /**
+         * @Author: ytrue
          * @Description:该方法返回动态内存分配的处理器
          */
         @Override
@@ -544,18 +570,119 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          */
         @Override
         public final void write(Object msg, ChannelPromise promise) {
-            try {
-                doWrite(msg);
-                //如果有监听器，这里可以通知监听器执行回调方法
-                promise.trySuccess();
-            } catch (Exception e) {
-                e.printStackTrace();
+            //仍然是判断是否为单线程执行器
+            assertEventLoop();
+            //得到写缓冲区
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            //如果写缓冲区为null，就设置发送失败的结果
+            //注意，write方法也是个异步方法，可以设置promise，有promise就可以设置监听器
+            //所以可以用promise设置发送成功或失败
+            if (outboundBuffer == null) {
+                safeSetFailure(promise, newClosedChannelException(initialCloseCause));
+                //发送失败就释放msg，这个msg实际上就是ByteBuf，也就是释放ByteBuf
+                ReferenceCountUtil.release(msg);
+                return;
             }
+            int size;
+            try {
+                //这里会过滤一下msg的类型，因为发送消息只会发送DirectBuffer或者fileRegion包装的msg，但是我们把fileRegion注释掉了
+                //没有引入这个类型，只引入了接口，没有引入实现类
+                //注意哦，ByteBuf都会被包装成可以检测是否内存泄漏的ByteBuf的类型，也就是AdvancedLeakAwareByteBuf类型
+                //这个类型的父类WrappedByteBuf中会持有原ByteBuf的引用，所以判断ByteBuf是否为直接内存的时候，
+                //会先从父类中得到直接内存的引用，在判断是否为直接内存，逻辑就在下面的方法内。下面的方法在AbstractNioByteChannel类中
+                msg = filterOutboundMessage(msg);
+                //计算要发送的消息的大小，其实就是得到包装msg的ByteBuf的可读字节的大小
+                size = pipeline.estimatorHandle().size(msg);
+                if (size < 0) {
+                    size = 0;
+                }
+            } catch (Throwable t) {
+                safeSetFailure(promise, t);
+                ReferenceCountUtil.release(msg);
+                return;
+            }
+            //在这里，就将要发送的消息加入到写缓冲区中了，该消息会被Entry来包装
+            //注意哦，这里只是把消息放到写缓冲区中了，并没有真正发送到socket中
+            //消息发送到socket的缓冲区中，才会被真正发送出去
+            //到这里，write方法实际上就执行完了。下面虽然还有一个doWrite方法，但那个方法是将写缓冲区中的消息发送到socket缓冲区
+            //中的，其实是属于flush作用的方法，要在flush方法中被调用
+            outboundBuffer.addMessage(msg, size, promise);
         }
 
         @Override
         public final void flush() {
+            assertEventLoop();
+            //得到写缓冲区
+            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            //判断其是否为null，这里之所以会有这个判断，是因为在源码的close方法中，关闭channel会把写缓冲区置为null
+            //所以如果判断为null，则说明channel已经关闭了
+            //现在还没有引入close方法，等最后一节课会将该方法引入
+            if (outboundBuffer == null) {
+                return;
+            }
+            //这里的操作就是把写缓冲区中的flushedEntry指向unflushedEntry，unflushedEntry其实就是写缓冲区中
+            //第一个要发送的消息数据
+            outboundBuffer.addFlush();
+            //这个方法就会把消息刷新到socket中
+            flush0();
         }
+
+        @SuppressWarnings("deprecation")
+        protected void flush0() {
+            //判断是否正在进行刷新操作
+            if (inFlush0) {
+                return;
+            }
+            //得到写缓冲区
+            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+
+            //判断写缓冲区是否为null，为null说明channel已经被关闭了，同时也要判断写缓冲区中是否有要被刷新的消息
+            if (outboundBuffer == null || outboundBuffer.isEmpty()) {
+                //上面两个有一个返回true，就直接return
+                return;
+            }
+            //在把正在刷新消息设置为true
+            inFlush0 = true;
+            //首先判断channel是否为活跃的状态
+            //注意，这里返回的是false，然后取反，才能向分支中继续运行
+            if (!isActive()) {
+                try {
+                    //然后判断channel是否为打开的状态
+                    if (isOpen()) {
+                        //走到这里说明channel是不活跃但是打开的状态，可能就是连接断开了，所以这里设置刷新失败，并且触发异常
+                        //failFlushed该方法会将代刷新的消息从写缓冲区中删除，同时Entry对象也会被释放到对象池中
+                        outboundBuffer.failFlushed(new NotYetConnectedException(), true);
+                    } else {
+                        //走到这里则说明channel并不活跃，而且不是打开状态，意味着channel已经关闭了，这时候就设置刷新失败，但是不处罚异常
+                        outboundBuffer.failFlushed(newClosedChannelException(initialCloseCause), false);
+                    }
+                } finally {
+                    inFlush0 = false;
+                }
+                return;
+            }
+            try {
+                //真正刷新数据到socket中的方法
+                doWrite(outboundBuffer);
+            } catch (Throwable t) {
+                //下面暂且先注释掉一些方法，后面讲到关闭channel时会详解讲解
+                if (t instanceof IOException && config().isAutoClose()) {
+                    initialCloseCause = t;
+                    //close(voidPromise(), t, newClosedChannelException(t), false);
+                } else {
+                    try {
+                        //shutdownOutput(voidPromise(), t);
+                    } catch (Throwable t2) {
+                        initialCloseCause = t;
+                        //close(voidPromise(), t2, newClosedChannelException(t), false);
+                    }
+                }
+            } finally {
+                //刷新完毕，要把该属性重置为false
+                inFlush0 = false;
+            }
+        }
+
 
 
         /**
@@ -616,10 +743,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /**
      * 该方法的位置正确，但是参数和源码有差异，源码的参数是netty自己定义的ChannelOutboundBuffer，是出站的数据缓冲区现在，我们先用最简单的实现，之后再重写
      *
-     * @param msg
+     * @param in
      * @throws Exception
      */
-    protected abstract void doWrite(Object msg) throws Exception;
+    protected abstract void doWrite(ChannelOutboundBuffer in) throws Exception;
 
     /**
      * 获取当前Channel的本地绑定地址，交给子类实现
@@ -679,6 +806,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             exception.initCause(cause);
         }
         return exception;
+    }
+
+
+    protected Object filterOutboundMessage(Object msg) throws Exception {
+        return msg;
     }
 
 

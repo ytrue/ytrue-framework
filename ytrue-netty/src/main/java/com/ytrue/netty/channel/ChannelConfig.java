@@ -131,6 +131,7 @@ public interface ChannelConfig {
      */
     ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
 
+    int getWriteBufferHighWaterMark();
 
     /**
      * 动态内存分配器终于也添加进来了
@@ -149,4 +150,17 @@ public interface ChannelConfig {
     ByteBufAllocator getAllocator();
 
     ChannelConfig setAllocator(ByteBufAllocator allocator);
+
+
+
+    MessageSizeEstimator getMessageSizeEstimator();
+
+
+    ChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator);
+
+
+    WriteBufferWaterMark getWriteBufferWaterMark();
+
+
+    ChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark);
 }
