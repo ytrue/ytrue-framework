@@ -78,6 +78,24 @@ public class InternalThreadLocalMap extends UnpaddedInternalThreadLocalMap {
     }
 
 
+    public Map<Class<?>, TypeParameterMatcher> typeParameterMatcherGetCache() {
+        Map<Class<?>, TypeParameterMatcher> cache = typeParameterMatcherGetCache;
+        if (cache == null) {
+            typeParameterMatcherGetCache = cache = new IdentityHashMap<Class<?>, TypeParameterMatcher>();
+        }
+        return cache;
+    }
+
+    public Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache() {
+        Map<Class<?>, Map<String, TypeParameterMatcher>> cache = typeParameterMatcherFindCache;
+        if (cache == null) {
+            //如果是第一次，这里得到的这个cache肯定为null，所以创建一个map
+            typeParameterMatcherFindCache = cache = new IdentityHashMap<Class<?>, Map<String, TypeParameterMatcher>>();
+        }
+        return cache;
+    }
+
+
     /**
      * 得到InternalThreadLocalMap
      *

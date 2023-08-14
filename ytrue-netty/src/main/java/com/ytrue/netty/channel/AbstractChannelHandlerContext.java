@@ -1,5 +1,6 @@
 package com.ytrue.netty.channel;
 
+import com.ytrue.netty.buffer.ByteBufAllocator;
 import com.ytrue.netty.util.*;
 import com.ytrue.netty.util.concurrent.EventExecutor;
 import com.ytrue.netty.util.internal.ObjectUtil;
@@ -1040,6 +1041,11 @@ public abstract class AbstractChannelHandlerContext implements ChannelHandlerCon
     @Override
     public String toString() {
         return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel() + ')';
+    }
+
+    @Override
+    public ByteBufAllocator alloc() {
+        return channel().config().getAllocator();
     }
 
 

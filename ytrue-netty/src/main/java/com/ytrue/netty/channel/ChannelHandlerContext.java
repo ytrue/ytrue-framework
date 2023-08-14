@@ -1,5 +1,6 @@
 package com.ytrue.netty.channel;
 
+import com.ytrue.netty.buffer.ByteBufAllocator;
 import com.ytrue.netty.util.Attribute;
 import com.ytrue.netty.util.AttributeKey;
 import com.ytrue.netty.util.AttributeMap;
@@ -102,4 +103,6 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
     @Deprecated
     @Override
     <T> boolean hasAttr(AttributeKey<T> key);
+
+    ByteBufAllocator alloc();
 }

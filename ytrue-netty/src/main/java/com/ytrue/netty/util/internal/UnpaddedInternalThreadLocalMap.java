@@ -42,8 +42,9 @@ public class UnpaddedInternalThreadLocalMap {
     /**
      * 下面这两个属性暂时用不到，等到了编解码的课程时，我们再引入它们
      */
-    //Map<Class<?>, TypeParameterMatcher> typeParameterMatcherGetCache;
-    //Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache;
+    Map<Class<?>, TypeParameterMatcher> typeParameterMatcherGetCache;
+    Map<Class<?>, Map<String, TypeParameterMatcher>> typeParameterMatcherFindCache;
+
 
     StringBuilder stringBuilder;
     Map<Charset, CharsetEncoder> charsetEncoderCache;
