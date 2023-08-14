@@ -125,13 +125,27 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     @Override
     public void execute(Runnable task) {
         if (task == null) {
-            throw new NullPointerException("task is null");
+            throw new NullPointerException("task");
         }
+        //这里一定会返回false，因为是其他线程向单线程执行器中提交任务的
+        boolean inEventLoop = inEventLoop(Thread.currentThread());
         //把任务提交到任务队列中
         addTask(task);
         //启动单线程执行器中的线程
         startThread();
+        //这里还有一个这个操作，比较重要的，就是要调用子类NioEventLoop中的wakeup方法，唤醒selector
+        //以便执行用户提交的任务
+        if (!addTaskWakesUp && wakesUpForTask(task)) {
+            wakeup(inEventLoop);
+        }
     }
+
+
+    @SuppressWarnings("unused")
+    protected boolean wakesUpForTask(Runnable task) {
+        return true;
+    }
+
 
     /**
      * 启动线程
@@ -194,6 +208,97 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return true;
     }
 
+    /**
+     * @Author: PP-jessica
+     * @Description:这个是新添加的方法
+     * 传进来的参数就是执行用户提交的任务所限制的时间
+     */
+    protected boolean runAllTasks(long timeoutNanos) {
+        //仍然是先通过下面这个方法，把定时任务添加到普通的任务队列中，这个方法会循环拉取
+        //也就是说，可能会把很多定时任务拉取到普通任务队列中，直到无法拉取就结束
+        fetchFromScheduledTaskQueue();
+        //从普通的任务队列中获得第一个任务
+        Runnable task = pollTask();
+        //如果任务为null，直接退出即可
+        if (task == null) {
+            //注释掉就行
+            //afterRunningAllTasks();
+            return false;
+        }
+        //这里通过ScheduledFutureTask.nanoTime()方法计算出第一个定时任务开始执行到当前时间为止经过了多少时间
+        //然后加上传进来的这个参数，也就是限制用户任务执行的时间，得到的其实就是一个执行用户任务的截止时间
+        //也就是说，执行用户任务，只能执行到这个时间
+        final long deadline = ScheduledFutureTask.nanoTime() + timeoutNanos;
+        //这个变量记录已经执行了的任务的数量
+        long runTasks = 0;
+        //最后一次执行的时间
+        long lastExecutionTime;
+        //开始循环执行了
+        for (;;) {
+            //执行任务队列中的任务
+            safeExecute(task);
+            //执行任务数量加1
+            runTasks ++;
+            //十六进制的0x3F其实就是十进制63
+            //其二进制为111111，下面这里做&运算，如果等于0说明，runTasks的二进制的低6位都为0
+            //而64的二进制为1000000，也就是说，只有当runTasks到达64的时候，下面这个判断条件就成立了
+            //这里其实也是做了一个均衡的处理，就是判断看执行了64个用户提交的任务时，看看用户任务
+            //的截止时间是否到了，如果到达截止时间，就退出循环。
+            if ((runTasks & 0x3F) == 0) {
+                //得到最后一次执行完的时间
+                lastExecutionTime = ScheduledFutureTask.nanoTime();
+                //这里判断是否超过限制的时间了
+                if (lastExecutionTime >= deadline) {
+                    //超过就退出循环，没超过就继续执行
+                    break;
+                }
+            }
+            //走到这里就是获取下一个任务
+            task = pollTask();
+            if (task == null) {
+                //如果为null，并且到达截止时间，就退出循环
+                lastExecutionTime = ScheduledFutureTask.nanoTime();
+                break;
+            }
+        }
+        //注释掉就行
+        //afterRunningAllTasks();
+        //给最后一次执行完的时间赋值
+        this.lastExecutionTime = lastExecutionTime;
+        return true;
+    }
+
+
+
+    //正在准备关闭的状态，这时候还没有关闭，一切正常运行
+    private static final int ST_SHUTTING_DOWN = 3;
+
+    /**
+     * @Author: PP-jessica
+     * @Description:新添加的方法
+     */
+    protected void wakeup(boolean inEventLoop) {
+        if (!inEventLoop || state == ST_SHUTTING_DOWN) {
+            taskQueue.offer(WAKEUP_TASK);
+        }
+    }
+
+
+    private static final long SCHEDULE_PURGE_INTERVAL = TimeUnit.SECONDS.toNanos(1);
+
+    /**
+     * @Author: PP-jessica
+     * @Description:新添加的方法
+     */
+    protected long delayNanos(long currentTimeNanos) {
+        //得到第一个定时任务
+        ScheduledFutureTask<?> scheduledTask = peekScheduledTask();
+        if (scheduledTask == null) {
+            return SCHEDULE_PURGE_INTERVAL;
+        }
+        //得到第一个定时任务的开始执行时间
+        return scheduledTask.delayNanos(currentTimeNanos);
+    }
 
     /**
      * 执行队列所有任务
