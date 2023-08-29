@@ -81,9 +81,10 @@
             <version>4.1.63.Final</version>
             <scope>compile</scope>
         </dependency>
+
         <dependency>
             <groupId>com.ytrue</groupId>
-            <artifactId>ytrue-job</artifactId>
+            <artifactId>ytrue-job-core</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
