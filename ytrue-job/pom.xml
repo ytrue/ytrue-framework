@@ -12,6 +12,7 @@
     <modules>
         <module>ytrue-job-admin</module>
         <module>ytrue-job-core</module>
+        <module>ytrue-job-executor-samples-01</module>
     </modules>
 
     <properties>

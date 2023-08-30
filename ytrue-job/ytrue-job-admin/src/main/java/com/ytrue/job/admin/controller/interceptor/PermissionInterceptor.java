@@ -3,6 +3,7 @@ package com.ytrue.job.admin.controller.interceptor;
 import com.ytrue.job.admin.controller.annotation.PermissionLimit;
 import com.ytrue.job.admin.core.model.XxlJobUser;
 import com.ytrue.job.admin.core.util.I18nUtil;
+import com.ytrue.job.admin.service.LoginService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.AsyncHandlerInterceptor;
@@ -53,6 +54,7 @@ public class PermissionInterceptor implements AsyncHandlerInterceptor {
             }
             // 判断是否有权限
             if (needAdminuser && loginUser.getRole() != 1) {
+                // 权限拦截
                 throw new RuntimeException(I18nUtil.getString("system_permission_limit"));
             }
             // 设置请求属性，把用户信息放入进去

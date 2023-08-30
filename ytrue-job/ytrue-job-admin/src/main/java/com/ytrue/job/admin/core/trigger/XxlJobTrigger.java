@@ -45,6 +45,7 @@ public class XxlJobTrigger {
 
         //根据任务id，从数据库中查询到该任务的完整信息
         XxlJobInfo jobInfo = XxlJobAdminConfig.getAdminConfig().getXxlJobInfoDao().loadById(jobId);
+
         //如果任务为null，则打印一条告警信息
         if (jobInfo == null) {
             logger.warn(">>>>>>>>>>>> trigger fail, jobId invalid，jobId={}", jobId);
@@ -60,6 +61,7 @@ public class XxlJobTrigger {
         //		FROM xxl_job_group AS t
         //		WHERE t.id = #{id}
         XxlJobGroup group = XxlJobAdminConfig.getAdminConfig().getXxlJobGroupDao().load(jobInfo.getJobGroup());
+
         //这里也有一个小判断，如果用户在web界面输入了执行器的地址，这里会把执行器的地址设置到刚才查询到的执行器中
         //注意，这里我想强调两点，第一，这里以及上面那个设置执行器参数，都是在web界面对任务进行执行一次操作时，才会出现的调用流程
         //这个大家要弄清楚
@@ -124,6 +126,7 @@ public class XxlJobTrigger {
             //这里就输出一下状态码吧，根据返回的状态码判断任务是否执行成功
             logger.info("返回的状态码" + triggerResult.getCode());
         } else {
+            logger.warn("执行器地址为空");
             triggerResult = new ReturnT<String>(ReturnT.FAIL_CODE, null);
         }
     }
@@ -146,7 +149,7 @@ public class XxlJobTrigger {
             runResult = executorBiz.run(triggerParam);
         } catch (Exception e) {
             logger.error(">>>>>>>>>>> xxl-job trigger error, please check if the executor[{}] is running.", address, e);
-            runResult = new ReturnT<String>(ReturnT.FAIL_CODE, ThrowableUtil.toString(e));
+            runResult = new ReturnT<>(ReturnT.FAIL_CODE, ThrowableUtil.toString(e));
         }
         //在这里拼接一下远程调用返回的状态码和消息
         StringBuffer runResultSB = new StringBuffer(I18nUtil.getString("jobconf_trigger_run") + "：");

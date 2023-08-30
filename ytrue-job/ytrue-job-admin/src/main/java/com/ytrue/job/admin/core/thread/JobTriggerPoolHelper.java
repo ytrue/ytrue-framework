@@ -90,6 +90,10 @@ public class JobTriggerPoolHelper {
                            final String executorShardingParam,
                            final String executorParam,
                            final String addressList) {
+
+
+
+
         //默认先选用快线程池
         ThreadPoolExecutor triggerPool_ = fastTriggerPool;
         //用任务Id从，慢执行的Map中得到该job对应的慢执行次数

@@ -156,7 +156,6 @@ public class JobScheduleHelper {
                             //重新恢复运行后，已经是第12秒了，现在去数据库中查询任务，12 > 5 + 5，就是if括号中的不等式，这样一来，是不是就查到了执行时间比当前时间还小的任务
                             //所以，情况要考虑全面
                             // 超过5秒的任务，这里对过期任务的处理方式！！！！
-                            // 10 > 0 + 5
                             if (nowTime > jobInfo.getTriggerNextTime() + PRE_READ_MS) {
                                 logger.warn(">>>>>>>>>>> xxl-job, schedule misfire, jobId = " + jobInfo.getId());
                                 //既然有过期的任务，就要看看怎么处理，是直接不处理，还是其他的处理方式。这里程序默认的是什么也不做，既然过期了，就过期吧
@@ -176,7 +175,6 @@ public class JobScheduleHelper {
                             //这一次得到的任务仅仅是小于当前时间，但是并没有加上5秒，说明这个任务虽然过期了但仍然是在当前的调度周期中
                             //比如说这个任务要在第2秒执行，但是服务器在第1秒宕机了，恢复之后已经是第4秒了，现在任务的执行时间小于了当前时间，但是仍然在5秒的调度器内
                             //所以直接执行即可
-                            // 10 > 5
                             else if (nowTime > jobInfo.getTriggerNextTime()) {
                                 //把任务交给触发器去远程调用,Cron触发
                                 JobTriggerPoolHelper.trigger(jobInfo.getId(), TriggerTypeEnum.CRON, -1, null, null, null);
@@ -343,6 +341,7 @@ public class JobScheduleHelper {
                     //判空操作
                     if (ringItemData.size() > 0) {
                         for (int jobId : ringItemData) {
+
                             //在for循环中处理定时任务，让触发器线程池开始远程调用这些任务
                             JobTriggerPoolHelper.trigger(jobId, TriggerTypeEnum.CRON, -1, null, null, null);
                         }
