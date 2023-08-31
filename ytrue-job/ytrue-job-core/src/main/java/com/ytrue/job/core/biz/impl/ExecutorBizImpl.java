@@ -1,6 +1,7 @@
 package com.ytrue.job.core.biz.impl;
 
 import com.ytrue.job.core.biz.ExecutorBiz;
+import com.ytrue.job.core.biz.model.IdleBeatParam;
 import com.ytrue.job.core.biz.model.ReturnT;
 import com.ytrue.job.core.biz.model.TriggerParam;
 import com.ytrue.job.core.executor.XxlJobExecutor;
@@ -81,7 +82,42 @@ public class ExecutorBizImpl implements ExecutorBiz {
         }
         //如果走到这里，不管上面是什么情况吧，总之jobThread肯定存在了，所以直接把要调度的任务放到这个线程内部的队列中
         //等待线程去调用，返回一个结果
-        ReturnT<String> pushResult = jobThread.pushTriggerQueue(triggerParam);
-        return pushResult;
+        return jobThread.pushTriggerQueue(triggerParam);
+    }
+
+
+    /**
+     * 心跳检测方法
+     *
+     * @return
+     */
+    @Override
+    public ReturnT<String> beat() {
+        return ReturnT.SUCCESS;
+    }
+
+
+    /**
+     * 判断调度中心调度的定时任务是否在执行器对应的任务线程的队列中
+     *
+     * @param idleBeatParam
+     * @return
+     */
+    @Override
+    public ReturnT<String> idleBeat(IdleBeatParam idleBeatParam) {
+        boolean isRunningOrHasQueue = false;
+        //获取执行定时任务的线程
+        JobThread jobThread = XxlJobExecutor.loadJobThread(idleBeatParam.getJobId());
+        if (jobThread != null && jobThread.isRunningOrHasQueue()) {
+            //如果线程不为null，并且正在工作，就把该变量置为true
+            isRunningOrHasQueue = true;
+        }
+        //这时候就说明调度的任务还没有被执行呢，肯定在队列里面待着呢，或者是正在执行呢
+        //总之，当前执行器比较繁忙
+        if (isRunningOrHasQueue) {
+            //所以就可以返回一个失败的状态码
+            return new ReturnT<>(ReturnT.FAIL_CODE, "job thread is running or has trigger queue.");
+        }
+        return ReturnT.SUCCESS;
     }
 }

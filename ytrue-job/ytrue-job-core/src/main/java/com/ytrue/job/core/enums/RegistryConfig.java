@@ -21,7 +21,13 @@ public class RegistryConfig {
      * 注册类型
      */
     public enum RegistryType {
+        /**
+         * 自动注册
+         */
         EXECUTOR,
+        /**
+         * 手动注册
+         */
         ADMIN
     }
 

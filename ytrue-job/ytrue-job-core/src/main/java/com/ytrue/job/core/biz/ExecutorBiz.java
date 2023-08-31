@@ -1,5 +1,6 @@
 package com.ytrue.job.core.biz;
 
+import com.ytrue.job.core.biz.model.IdleBeatParam;
 import com.ytrue.job.core.biz.model.ReturnT;
 import com.ytrue.job.core.biz.model.TriggerParam;
 
@@ -18,5 +19,20 @@ public interface ExecutorBiz {
      */
     ReturnT<String> run(TriggerParam triggerParam);
 
+
+    /**
+     * 心跳检测方法
+     *
+     * @return
+     */
+    ReturnT<String> beat();
+
+    /**
+     * 判断调度中心调度的定时任务是否在执行器对应的任务线程的队列中
+     *
+     * @param idleBeatParam
+     * @return
+     */
+    ReturnT<String> idleBeat(IdleBeatParam idleBeatParam);
 
 }

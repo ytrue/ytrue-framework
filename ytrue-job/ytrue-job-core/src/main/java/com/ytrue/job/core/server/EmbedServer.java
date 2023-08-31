@@ -2,6 +2,7 @@ package com.ytrue.job.core.server;
 
 import com.ytrue.job.core.biz.ExecutorBiz;
 import com.ytrue.job.core.biz.impl.ExecutorBizImpl;
+import com.ytrue.job.core.biz.model.IdleBeatParam;
 import com.ytrue.job.core.biz.model.ReturnT;
 import com.ytrue.job.core.biz.model.TriggerParam;
 import com.ytrue.job.core.thread.ExecutorRegistryThread;
@@ -178,6 +179,14 @@ public class EmbedServer {
             try {
                 //开始从uri中具体判断，调度中心触发的是什么任务了
                 switch (uri) {
+                    //这里触发的就是心跳检测，判断执行器这一端是否启动了
+                    case "/beat":
+                        return executorBiz.beat();
+                    case "/idleBeat":
+                        //这里就是判断调度中心要调度的任务是否可以顺利执行，其实就是判断该任务是否正在被
+                        //执行器这一端执行或者在执行器的队列中，如果在的话，说明当前执行器比较繁忙
+                        IdleBeatParam idleBeatParam = GsonTool.fromJson(requestData, IdleBeatParam.class);
+                        return executorBiz.idleBeat(idleBeatParam);
                     case "/run":
                         //run就意味着是要执行定时任务
                         //把requestData转化成触发器参数对象，也就是TriggerParam对象

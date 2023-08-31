@@ -3,6 +3,7 @@ package com.ytrue.job.admin.core.trigger;
 import com.ytrue.job.admin.core.conf.XxlJobAdminConfig;
 import com.ytrue.job.admin.core.model.XxlJobGroup;
 import com.ytrue.job.admin.core.model.XxlJobInfo;
+import com.ytrue.job.admin.core.route.ExecutorRouteStrategyEnum;
 import com.ytrue.job.admin.core.scheduler.XxlJobScheduler;
 import com.ytrue.job.admin.core.util.I18nUtil;
 import com.ytrue.job.core.biz.ExecutorBiz;
@@ -71,6 +72,7 @@ public class XxlJobTrigger {
         if (addressList != null && addressList.trim().length() > 0) {
             //这里是设置执行器地址的注册方式，0是自动注册，就是1是用户手动注册的
             group.setAddressType(1);
+            //然后把用户在web页面输入的执行器地址覆盖原来的执行器地址
             group.setAddressList(addressList.trim());
         }
         //执行触发器任务，这里有几个参数我直接写死了，因为现在还用不到，为了不报错，我们就直接写死
@@ -96,6 +98,10 @@ public class XxlJobTrigger {
      * @param total
      */
     private static void processTrigger(XxlJobGroup group, XxlJobInfo jobInfo, int finalFailRetryCount, TriggerTypeEnum triggerType, int index, int total) {
+
+        //得到当前要调度的执行任务的路由策略，默认是没有
+        ExecutorRouteStrategyEnum executorRouteStrategyEnum = ExecutorRouteStrategyEnum.match(jobInfo.getExecutorRouteStrategy(), null);
+
         //初始化触发器参数，这里的这个触发器参数，是要在远程调用的另一端，也就是执行器那一端使用的
         TriggerParam triggerParam = new TriggerParam();
         //设置任务id
@@ -106,16 +112,25 @@ public class XxlJobTrigger {
         triggerParam.setExecutorParams(jobInfo.getExecutorParam());
         //设置执行模式，一般都是bean模式
         triggerParam.setGlueType(jobInfo.getGlueType());
+
         //接下来要再次设定远程调用的服务实例的地址
-        //这里其实是考虑到了路由策略，但是第一版本还不涉及这些知识，所以就先不这么做了
+        //这里其实是考虑到了路由策略
         String address = null;
-        //得到所有注册到服务端的执行器的地址，并且做判空处理
+        ReturnT<String> routeAddressResult;
+        //得到所有注册到服务端的执行器的地址
         List<String> registryList = group.getRegistryList();
-        if (registryList != null && !registryList.isEmpty()) {
-            //在源码中，本来这里就要使用路由策略，选择具体的执行器地址了，但是现在我们还没有引入路由策略
-            //所以这里就简单处理，就使用集合中的第一个地址
-            address = registryList.get(0);
+        // 判空处理
+        if (registryList!=null && !registryList.isEmpty()) {
+            //在这里根据路由策略获得最终选用的执行器地址
+            routeAddressResult = executorRouteStrategyEnum.getRouter().route(triggerParam, registryList);
+            if (routeAddressResult.getCode() == ReturnT.SUCCESS_CODE) {
+                address = routeAddressResult.getContent();
+            } else {
+                //如果没得到地址，就赋值失败，这里还用不到这个失败结果，但是先列出来吧
+                routeAddressResult = new ReturnT<>(ReturnT.FAIL_CODE, I18nUtil.getString("jobconf_trigger_address_empty"));
+            }
         }
+
         //接下来就定义一个远程调用的结果变量
         ReturnT<String> triggerResult;
         //如果地址不为空
@@ -127,7 +142,7 @@ public class XxlJobTrigger {
             logger.info("返回的状态码" + triggerResult.getCode());
         } else {
             logger.warn("执行器地址为空");
-            triggerResult = new ReturnT<String>(ReturnT.FAIL_CODE, null);
+            triggerResult = new ReturnT<>(ReturnT.FAIL_CODE, null);
         }
     }
 
