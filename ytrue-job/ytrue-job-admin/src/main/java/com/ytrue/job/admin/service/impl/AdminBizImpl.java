@@ -1,10 +1,14 @@
 package com.ytrue.job.admin.service.impl;
 
+import com.ytrue.job.admin.core.thread.JobCompleteHelper;
 import com.ytrue.job.admin.core.thread.JobRegistryHelper;
 import com.ytrue.job.core.biz.AdminBiz;
+import com.ytrue.job.core.biz.model.HandleCallbackParam;
 import com.ytrue.job.core.biz.model.RegistryParam;
 import com.ytrue.job.core.biz.model.ReturnT;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @author ytrue
@@ -34,5 +38,16 @@ public class AdminBizImpl implements AdminBiz {
     @Override
     public ReturnT<String> registryRemove(RegistryParam registryParam) {
         return JobRegistryHelper.getInstance().registryRemove(registryParam);
+    }
+
+    /**
+     * 调度中心要调用的方法，把执行器回调的定时任务执行的结果信息收集起来
+     *
+     * @param callbackParamList
+     * @return
+     */
+    @Override
+    public ReturnT<String> callback(List<HandleCallbackParam> callbackParamList) {
+        return JobCompleteHelper.getInstance().callback(callbackParamList);
     }
 }

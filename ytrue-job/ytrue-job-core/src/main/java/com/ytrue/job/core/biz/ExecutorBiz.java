@@ -1,8 +1,6 @@
 package com.ytrue.job.core.biz;
 
-import com.ytrue.job.core.biz.model.IdleBeatParam;
-import com.ytrue.job.core.biz.model.ReturnT;
-import com.ytrue.job.core.biz.model.TriggerParam;
+import com.ytrue.job.core.biz.model.*;
 
 /**
  * @author ytrue
@@ -34,5 +32,13 @@ public interface ExecutorBiz {
      * @return
      */
     ReturnT<String> idleBeat(IdleBeatParam idleBeatParam);
+
+
+    /**
+     *
+     * @param logParam
+     * @return
+     */
+    ReturnT<LogResult> log(LogParam logParam);
 
 }

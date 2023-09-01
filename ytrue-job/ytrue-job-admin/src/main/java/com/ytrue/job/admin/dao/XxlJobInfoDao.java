@@ -48,4 +48,6 @@ public interface XxlJobInfoDao {
 
     int findAllCount();
 
+    List<XxlJobInfo> getJobsByGroup(@Param("jobGroup") int jobGroup);
+
 }

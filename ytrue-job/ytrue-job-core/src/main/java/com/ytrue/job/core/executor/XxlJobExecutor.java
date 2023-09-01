@@ -5,8 +5,10 @@ import com.ytrue.job.core.biz.client.AdminBizClient;
 import com.ytrue.job.core.handler.IJobHandler;
 import com.ytrue.job.core.handler.annotation.XxlJob;
 import com.ytrue.job.core.handler.impl.MethodJobHandler;
+import com.ytrue.job.core.log.XxlJobFileAppender;
 import com.ytrue.job.core.server.EmbedServer;
 import com.ytrue.job.core.thread.JobThread;
+import com.ytrue.job.core.thread.TriggerCallbackThread;
 import com.ytrue.job.core.util.IpUtil;
 import com.ytrue.job.core.util.NetUtil;
 import lombok.Getter;
@@ -81,10 +83,16 @@ public class XxlJobExecutor {
      * @throws Exception
      */
     public void start() throws Exception {
+        //初始化日记收集组件，并且把用户设置的存储日记的路径设置到该组件中
+        XxlJobFileAppender.initLogPath(logPath);
+
         //初始化admin链接路径存储集合
         //如果是在集群情况下，可能会有多个调度中心，所以，执行器要把自己分别注册到这些调度中心上
         //这里的方法就是根据用户配置的调度中心的地址，把用来远程注册的客户端初始化好
         initAdminBizList(adminAddresses, accessToken);
+
+        //启动回调执行结果信息给调度中心的组件
+        TriggerCallbackThread.getInstance().start();
 
         //启动执行器内部内嵌的服务器，该服务器是用Netty构建的，但构建的是http服务器，仍然是用http来传输消息的
         //在该方法中，会进一步把执行器注册到调度中心上

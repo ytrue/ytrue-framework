@@ -3,16 +3,19 @@ package com.ytrue.job.admin.core.trigger;
 import com.ytrue.job.admin.core.conf.XxlJobAdminConfig;
 import com.ytrue.job.admin.core.model.XxlJobGroup;
 import com.ytrue.job.admin.core.model.XxlJobInfo;
+import com.ytrue.job.admin.core.model.XxlJobLog;
 import com.ytrue.job.admin.core.route.ExecutorRouteStrategyEnum;
 import com.ytrue.job.admin.core.scheduler.XxlJobScheduler;
 import com.ytrue.job.admin.core.util.I18nUtil;
 import com.ytrue.job.core.biz.ExecutorBiz;
 import com.ytrue.job.core.biz.model.ReturnT;
 import com.ytrue.job.core.biz.model.TriggerParam;
+import com.ytrue.job.core.util.IpUtil;
 import com.ytrue.job.core.util.ThrowableUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -102,6 +105,20 @@ public class XxlJobTrigger {
         //得到当前要调度的执行任务的路由策略，默认是没有
         ExecutorRouteStrategyEnum executorRouteStrategyEnum = ExecutorRouteStrategyEnum.match(jobInfo.getExecutorRouteStrategy(), null);
 
+        //这里就要开始执行和定时任务日志相关的操作了
+        //先创建一个日志对象，用于记录该定时任务执行是的一些信息
+        XxlJobLog jobLog = new XxlJobLog();
+        //记录定时任务的执行器组id
+        jobLog.setJobGroup(jobInfo.getJobGroup());
+        //设置定时任务的id
+        jobLog.setJobId(jobInfo.getId());
+        //设置定时任务的触发时间
+        jobLog.setTriggerTime(new Date());
+        //在这里把定时任务日志保存到数据库中，保存成功之后，定时任务日志的id也就有了
+        XxlJobAdminConfig.getAdminConfig().getXxlJobLogDao().save(jobLog);
+        logger.debug(">>>>>>>>>>> xxl-job trigger start, jobId:{}", jobLog.getId());
+        // -----------------------------------------
+
         //初始化触发器参数，这里的这个触发器参数，是要在远程调用的另一端，也就是执行器那一端使用的
         TriggerParam triggerParam = new TriggerParam();
         //设置任务id
@@ -110,17 +127,27 @@ public class XxlJobTrigger {
         triggerParam.setExecutorHandler(jobInfo.getExecutorHandler());
         //把执行器要执行的任务的参数设置进去
         triggerParam.setExecutorParams(jobInfo.getExecutorParam());
+        //定时任务的路由策略设置进去
+        triggerParam.setExecutorBlockStrategy(jobInfo.getExecutorBlockStrategy());
         //设置执行模式，一般都是bean模式
         triggerParam.setGlueType(jobInfo.getGlueType());
+
+
+        // ------------------------新增日志参数
+        //设置定时任务的日志id
+        triggerParam.setLogId(jobLog.getId());
+        //设置定时任务的触发时间，这个触发时间就是jobLog刚才设置的那个时间
+        triggerParam.setLogDateTime(jobLog.getTriggerTime().getTime());
+
 
         //接下来要再次设定远程调用的服务实例的地址
         //这里其实是考虑到了路由策略
         String address = null;
-        ReturnT<String> routeAddressResult;
+        ReturnT<String> routeAddressResult = null;
         //得到所有注册到服务端的执行器的地址
         List<String> registryList = group.getRegistryList();
         // 判空处理
-        if (registryList!=null && !registryList.isEmpty()) {
+        if (registryList != null && !registryList.isEmpty()) {
             //在这里根据路由策略获得最终选用的执行器地址
             routeAddressResult = executorRouteStrategyEnum.getRouter().route(triggerParam, registryList);
             if (routeAddressResult.getCode() == ReturnT.SUCCESS_CODE) {
@@ -144,6 +171,55 @@ public class XxlJobTrigger {
             logger.warn("执行器地址为空");
             triggerResult = new ReturnT<>(ReturnT.FAIL_CODE, null);
         }
+
+
+        //在这里拼接一下触发任务的信息，其实就是web界面的调度备注
+        StringBuffer triggerMsgSb = new StringBuffer();
+        // 任务触发类型
+        triggerMsgSb.append(I18nUtil.getString("jobconf_trigger_type")).append("：").append(triggerType.getTitle());
+        // 调度机器
+        triggerMsgSb.append("<br>").append(I18nUtil.getString("jobconf_trigger_admin_adress")).append("：").append(IpUtil.getIp());
+        // 执行器-注册方式
+        triggerMsgSb.append("<br>").append(I18nUtil.getString("jobconf_trigger_exe_regtype")).append("：")
+                // 自动注册 or 手动录入
+                .append((group.getAddressType() == 0) ? I18nUtil.getString("jobgroup_field_addressType_0") : I18nUtil.getString("jobgroup_field_addressType_1"));
+        // 执行器-地址列表
+        triggerMsgSb.append("<br>").append(I18nUtil.getString("jobconf_trigger_exe_regaddress")).append("：").append(group.getRegistryList());
+        // 路由策略
+        triggerMsgSb.append("<br>").append(I18nUtil.getString("jobinfo_field_executorRouteStrategy")).append("：").append(executorRouteStrategyEnum.getTitle());
+
+        //注释的都是暂时用不上的
+//        if (shardingParam != null) {
+//            triggerMsgSb.append("("+shardingParam+")");
+//        }
+        //triggerMsgSb.append("<br>").append(I18nUtil.getString("jobinfo_field_executorBlockStrategy")).append("：").append(blockStrategy.getTitle());
+
+
+        // 任务超时时间
+        triggerMsgSb.append("<br>").append(I18nUtil.getString("jobinfo_field_timeout")).append("：").append(jobInfo.getExecutorTimeout());
+        //失败重试次数
+        triggerMsgSb.append("<br>").append(I18nUtil.getString("jobinfo_field_executorFailRetryCount")).append("：").append(finalFailRetryCount);
+        // 触发调度
+        triggerMsgSb.append("<br><br><span style=\"color:#00c0ef;\" > >>>>>>>>>>>" + I18nUtil.getString("jobconf_trigger_run") + "<<<<<<<<<<< </span><br>")
+                .append((routeAddressResult != null && routeAddressResult.getMsg() != null) ? routeAddressResult.getMsg() + "<br><br>" : "").append(triggerResult.getMsg() != null ? triggerResult.getMsg() : "");
+
+
+        // 设置执行器地址
+        jobLog.setExecutorAddress(address);
+        //设置执行定时任务的方法名称
+        jobLog.setExecutorHandler(jobInfo.getExecutorHandler());
+        //设置执行参数
+        jobLog.setExecutorParam(jobInfo.getExecutorParam());
+        //jobLog.setExecutorShardingParam(shardingParam);
+        //设置失败重试次数
+        jobLog.setExecutorFailRetryCount(finalFailRetryCount);
+        //设置触发结果码
+        jobLog.setTriggerCode(triggerResult.getCode());
+        //设置触发任务信息，也就是调度备注
+        jobLog.setTriggerMsg(triggerMsgSb.toString());
+        //更新数据库信息
+        XxlJobAdminConfig.getAdminConfig().getXxlJobLogDao().updateTriggerInfo(jobLog);
+        logger.debug(">>>>>>>>>>> xxl-job trigger end, jobId:{}", jobLog.getId());
     }
 
 

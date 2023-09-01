@@ -1,11 +1,11 @@
 package com.ytrue.job.admin.core.scheduler;
 
 import com.ytrue.job.admin.core.conf.XxlJobAdminConfig;
-import com.ytrue.job.admin.core.thread.JobRegistryHelper;
-import com.ytrue.job.admin.core.thread.JobScheduleHelper;
-import com.ytrue.job.admin.core.thread.JobTriggerPoolHelper;
+import com.ytrue.job.admin.core.thread.*;
+import com.ytrue.job.admin.core.util.I18nUtil;
 import com.ytrue.job.core.biz.ExecutorBiz;
 import com.ytrue.job.core.biz.client.ExecutorBizClient;
+import com.ytrue.job.core.enums.ExecutorBlockStrategyEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +22,10 @@ public class XxlJobScheduler {
 
 
     public void init() throws Exception {
+
+        //这里是初始化语言国际化的操作，其实内部就是把一些策略的中文初始化好
+        initI18n();
+
         //初始化触发器线程池，这里面会创建两个线程池，一个快线程池，一个慢线程池
         //触发器任务的执行，就是由这两个线程池执行的
         JobTriggerPoolHelper.toStart();
@@ -29,6 +33,13 @@ public class XxlJobScheduler {
         //初始化注册中心组件，这里是个简易版本，后面会重构到和源码一致
         //现在的版本并没有定时清理过期服务实例的功能
         JobRegistryHelper.getInstance().start();
+
+        //启动调度中心接收执行器回调信息的工作组件
+        JobCompleteHelper.getInstance().start();
+
+        //该组件的功能也很简答，就是统计定时任务日志的信息，成功失败次数等等
+        //同时也会清除过期日志，过期日志时间是用户写在配置文件中的，默认为30天
+        JobLogReportHelper.getInstance().start();
 
         //初始化任务调度线程，这个线程可以说是xxl-job服务端的核心了
         //注意，大家在理解任务调度的时候，没必要把这个概念搞得特别复杂，所谓调度，就是哪个任务该执行了
@@ -40,6 +51,12 @@ public class XxlJobScheduler {
     }
 
 
+    private void initI18n(){
+        for (ExecutorBlockStrategyEnum item: ExecutorBlockStrategyEnum.values()) {
+            item.setTitle(I18nUtil.getString("jobconf_block_".concat(item.name())));
+        }
+    }
+
     /**
      * 释放资源的方法
      *
@@ -47,6 +64,8 @@ public class XxlJobScheduler {
      */
     public void destroy() throws Exception {
         JobScheduleHelper.getInstance().toStop();
+        JobLogReportHelper.getInstance().toStop();
+        JobCompleteHelper.getInstance().toStop();
         JobRegistryHelper.getInstance().toStop();
         JobTriggerPoolHelper.toStop();
     }

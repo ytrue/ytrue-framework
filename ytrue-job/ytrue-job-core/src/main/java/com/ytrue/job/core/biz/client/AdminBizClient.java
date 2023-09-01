@@ -1,9 +1,12 @@
 package com.ytrue.job.core.biz.client;
 
 import com.ytrue.job.core.biz.AdminBiz;
+import com.ytrue.job.core.biz.model.HandleCallbackParam;
 import com.ytrue.job.core.biz.model.RegistryParam;
 import com.ytrue.job.core.biz.model.ReturnT;
 import com.ytrue.job.core.util.XxlJobRemotingUtil;
+
+import java.util.List;
 
 /**
  * @author ytrue
@@ -57,5 +60,17 @@ public class AdminBizClient implements AdminBiz {
     @Override
     public ReturnT<String> registryRemove(RegistryParam registryParam) {
         return XxlJobRemotingUtil.postBody(addressUrl + "api/registryRemove", accessToken, timeout, registryParam, String.class);
+    }
+
+
+    /**
+     * 回调定时任务的执行信息给调度中心的方法
+     *
+     * @param callbackParamList
+     * @return
+     */
+    @Override
+    public ReturnT<String> callback(List<HandleCallbackParam> callbackParamList) {
+        return XxlJobRemotingUtil.postBody(addressUrl + "api/callback", accessToken, timeout, callbackParamList, String.class);
     }
 }

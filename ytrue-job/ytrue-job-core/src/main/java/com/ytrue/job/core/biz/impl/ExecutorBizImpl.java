@@ -1,15 +1,16 @@
 package com.ytrue.job.core.biz.impl;
 
 import com.ytrue.job.core.biz.ExecutorBiz;
-import com.ytrue.job.core.biz.model.IdleBeatParam;
-import com.ytrue.job.core.biz.model.ReturnT;
-import com.ytrue.job.core.biz.model.TriggerParam;
+import com.ytrue.job.core.biz.model.*;
 import com.ytrue.job.core.executor.XxlJobExecutor;
 import com.ytrue.job.core.glue.GlueTypeEnum;
 import com.ytrue.job.core.handler.IJobHandler;
+import com.ytrue.job.core.log.XxlJobFileAppender;
 import com.ytrue.job.core.thread.JobThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Date;
 
 /**
  * @author ytrue
@@ -119,5 +120,15 @@ public class ExecutorBizImpl implements ExecutorBiz {
             return new ReturnT<>(ReturnT.FAIL_CODE, "job thread is running or has trigger queue.");
         }
         return ReturnT.SUCCESS;
+    }
+
+    @Override
+    public ReturnT<LogResult> log(LogParam logParam) {
+        //根据定时任务id和触发时间创建文件名
+        String logFileName = XxlJobFileAppender.makeLogFileName(new Date(logParam.getLogDateTim()), logParam.getLogId());
+        //开始从日志文件中读取日志
+        LogResult logResult = XxlJobFileAppender.readLog(logFileName, logParam.getFromLineNum());
+        //返回结果
+        return new ReturnT<>(logResult);
     }
 }

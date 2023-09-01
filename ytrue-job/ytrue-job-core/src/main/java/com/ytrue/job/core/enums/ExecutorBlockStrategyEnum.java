@@ -26,7 +26,11 @@ public enum ExecutorBlockStrategyEnum {
      */
     COVER_EARLY("Cover Early");
 
-    private final String title;
+    private String title;
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
     /**
      * 过去的对应的枚举

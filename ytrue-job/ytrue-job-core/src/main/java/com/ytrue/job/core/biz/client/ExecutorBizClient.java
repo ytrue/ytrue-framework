@@ -1,9 +1,7 @@
 package com.ytrue.job.core.biz.client;
 
 import com.ytrue.job.core.biz.ExecutorBiz;
-import com.ytrue.job.core.biz.model.IdleBeatParam;
-import com.ytrue.job.core.biz.model.ReturnT;
-import com.ytrue.job.core.biz.model.TriggerParam;
+import com.ytrue.job.core.biz.model.*;
 import com.ytrue.job.core.util.XxlJobRemotingUtil;
 
 /**
@@ -61,5 +59,10 @@ public class ExecutorBizClient implements ExecutorBiz {
         return XxlJobRemotingUtil.postBody(addressUrl + "idleBeat", accessToken, timeout, idleBeatParam, String.class);
     }
 
+
+    @Override
+    public ReturnT<LogResult> log(LogParam logParam) {
+        return XxlJobRemotingUtil.postBody(addressUrl + "log", accessToken, timeout, logParam, LogResult.class);
+    }
 
 }

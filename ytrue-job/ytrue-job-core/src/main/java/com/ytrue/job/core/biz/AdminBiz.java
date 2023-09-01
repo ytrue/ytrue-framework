@@ -1,7 +1,10 @@
 package com.ytrue.job.core.biz;
 
+import com.ytrue.job.core.biz.model.HandleCallbackParam;
 import com.ytrue.job.core.biz.model.RegistryParam;
 import com.ytrue.job.core.biz.model.ReturnT;
+
+import java.util.List;
 
 /**
  * @author ytrue
@@ -25,4 +28,13 @@ public interface AdminBiz {
      * @return
      */
     ReturnT<String> registryRemove(RegistryParam registryParam);
+
+
+    /**
+     * 回调定时任务的执行信息给调度中心的方法
+     *
+     * @param callbackParamList
+     * @return
+     */
+    ReturnT<String> callback(List<HandleCallbackParam> callbackParamList);
 }

@@ -19,4 +19,10 @@ public interface XxlJobLogReportDao {
 
     List<XxlJobLogReport> queryLogReport(@Param("triggerDayFrom") Date triggerDayFrom,
                                          @Param("triggerDayTo") Date triggerDayTo);
+
+
+    int save(XxlJobLogReport xxlJobLogReport);
+
+
+    int update(XxlJobLogReport xxlJobLogReport);
 }
