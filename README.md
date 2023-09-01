@@ -6,4 +6,5 @@
 - ytrue-orm：实现一个简单的mybatis
 - ytrue-rpc：基于netty实现rpc框架
 - ytrue-netty：简易版netty
+- ytrue-job：实现xxl-job
 
