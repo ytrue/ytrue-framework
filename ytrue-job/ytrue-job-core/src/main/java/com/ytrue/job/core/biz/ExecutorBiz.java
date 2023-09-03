@@ -35,10 +35,17 @@ public interface ExecutorBiz {
 
 
     /**
-     *
      * @param logParam
      * @return
      */
     ReturnT<LogResult> log(LogParam logParam);
+
+    /**
+     * 终止任务的方法
+     *
+     * @param killParam
+     * @return
+     */
+    ReturnT<String> kill(KillParam killParam);
 
 }

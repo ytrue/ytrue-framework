@@ -1,5 +1,6 @@
 package com.ytrue.job.admin.core.conf;
 
+import com.ytrue.job.admin.core.alarm.JobAlarmer;
 import com.ytrue.job.admin.core.scheduler.XxlJobScheduler;
 import com.ytrue.job.admin.dao.*;
 import lombok.Getter;
@@ -49,7 +50,7 @@ public class XxlJobAdminConfig implements InitializingBean, DisposableBean {
     private String emailFrom;
 
     /**
-     * 该属性是日志保留时间的意思
+     * 调度中心日志保留时间，该属性是日志保留时间的意思
      */
     @Value("${xxl.job.logretentiondays}")
     private int logretentiondays;
@@ -105,6 +106,10 @@ public class XxlJobAdminConfig implements InitializingBean, DisposableBean {
     @Resource
     @Getter
     private DataSource dataSource;
+
+    @Resource
+    @Getter
+    private JobAlarmer jobAlarmer;
 
     public int getTriggerPoolFastMax() {
         if (triggerPoolFastMax < 200) {

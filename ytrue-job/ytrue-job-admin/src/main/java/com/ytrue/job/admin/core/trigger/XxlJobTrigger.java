@@ -10,6 +10,7 @@ import com.ytrue.job.admin.core.util.I18nUtil;
 import com.ytrue.job.core.biz.ExecutorBiz;
 import com.ytrue.job.core.biz.model.ReturnT;
 import com.ytrue.job.core.biz.model.TriggerParam;
+import com.ytrue.job.core.enums.ExecutorBlockStrategyEnum;
 import com.ytrue.job.core.util.IpUtil;
 import com.ytrue.job.core.util.ThrowableUtil;
 import org.slf4j.Logger;
@@ -60,6 +61,10 @@ public class XxlJobTrigger {
             //设置执行器的任务参数
             jobInfo.setExecutorParam(executorParam);
         }
+
+        //得到用户设定的该任务的失败重试次数
+        int finalFailRetryCount = failRetryCount >= 0 ? failRetryCount : jobInfo.getExecutorFailRetryCount();
+
         //同样是根据jobId获取所有的执行器组
         // 	SELECT <include refid="Base_Column_List" />
         //		FROM xxl_job_group AS t
@@ -86,7 +91,7 @@ public class XxlJobTrigger {
         //分片总数就为3，这里虽然有这两个参数，实际上在第一个版本还用不到。之所以不把参数略去是因为，这样一来
         //需要改动的地方就有点多了，大家理解一下
         //在该方法内，会真正开始远程调用，这个方法，也是远程调用的核心方法
-        processTrigger(group, jobInfo, -1, triggerType, 0, 1);
+        processTrigger(group, jobInfo, finalFailRetryCount, triggerType, 0, 1);
     }
 
 
@@ -101,6 +106,8 @@ public class XxlJobTrigger {
      * @param total
      */
     private static void processTrigger(XxlJobGroup group, XxlJobInfo jobInfo, int finalFailRetryCount, TriggerTypeEnum triggerType, int index, int total) {
+        //获得定时任务的阻塞策略，默认是串行
+        ExecutorBlockStrategyEnum blockStrategy = ExecutorBlockStrategyEnum.match(jobInfo.getExecutorBlockStrategy(), ExecutorBlockStrategyEnum.SERIAL_EXECUTION);
 
         //得到当前要调度的执行任务的路由策略，默认是没有
         ExecutorRouteStrategyEnum executorRouteStrategyEnum = ExecutorRouteStrategyEnum.match(jobInfo.getExecutorRouteStrategy(), null);
@@ -192,9 +199,7 @@ public class XxlJobTrigger {
 //        if (shardingParam != null) {
 //            triggerMsgSb.append("("+shardingParam+")");
 //        }
-        //triggerMsgSb.append("<br>").append(I18nUtil.getString("jobinfo_field_executorBlockStrategy")).append("：").append(blockStrategy.getTitle());
-
-
+        triggerMsgSb.append("<br>").append(I18nUtil.getString("jobinfo_field_executorBlockStrategy")).append("：").append(blockStrategy.getTitle());
         // 任务超时时间
         triggerMsgSb.append("<br>").append(I18nUtil.getString("jobinfo_field_timeout")).append("：").append(jobInfo.getExecutorTimeout());
         //失败重试次数

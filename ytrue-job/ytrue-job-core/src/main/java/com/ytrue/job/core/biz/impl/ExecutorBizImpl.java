@@ -2,6 +2,7 @@ package com.ytrue.job.core.biz.impl;
 
 import com.ytrue.job.core.biz.ExecutorBiz;
 import com.ytrue.job.core.biz.model.*;
+import com.ytrue.job.core.enums.ExecutorBlockStrategyEnum;
 import com.ytrue.job.core.executor.XxlJobExecutor;
 import com.ytrue.job.core.glue.GlueTypeEnum;
 import com.ytrue.job.core.handler.IJobHandler;
@@ -75,6 +76,36 @@ public class ExecutorBizImpl implements ExecutorBiz {
             return new ReturnT<>(ReturnT.FAIL_CODE, "glueType[" + triggerParam.getGlueType() + "] is not valid.");
         }
 
+        //走到这里只是判断jobThread不为null，说明执行器端已经为该定时任务创建了工作线程了
+        if (jobThread != null) {
+            //得到该定时任务的阻塞策略
+            ExecutorBlockStrategyEnum blockStrategy = ExecutorBlockStrategyEnum.match(triggerParam.getExecutorBlockStrategy(), null);
+
+            // 直接丢弃
+            if (ExecutorBlockStrategyEnum.DISCARD_LATER == blockStrategy) {
+                //走到这里说明定时任务的阻塞策略为直接丢弃
+                //所以接下来要判断一下执行该定时任务的线程是否正在工作，如果正在工作并且其内部的队列中有数据
+                //说明该线程执行的定时任务已经被调度过几次了，但是还未执行，只能暂时缓存在工作线程的内部队列中
+                if (jobThread.isRunningOrHasQueue()) {
+                    //因为阻塞策略是直接丢弃，所以直接返回失败结果
+                    return new ReturnT<>(ReturnT.FAIL_CODE, "block strategy effect：" + ExecutorBlockStrategyEnum.DISCARD_LATER.getTitle());
+                }
+                //走到这里说明得到的阻塞策略为覆盖，覆盖的意思就是旧的任务不执行了，直接执行这个新的定时任务
+            } else if (ExecutorBlockStrategyEnum.COVER_EARLY == blockStrategy) {
+
+                if (jobThread.isRunningOrHasQueue()) {
+                    removeOldReason = "block strategy effect：" + ExecutorBlockStrategyEnum.COVER_EARLY.getTitle();
+                    //所以这里把工作线程的引用置为null，这样下面就可以创建一个新的工作线程，然后缓存到Map中
+                    //新的工作线程就是直接执行新的定时任务了，默认的阻塞策略就是串行，都放到工作线程内部的队列中，等待被执行
+                    jobThread = null;
+                }
+
+            } else {
+                //这里源码中还未实现，直接空着即可
+            }
+
+        }
+
         if (jobThread == null) {
             //走到这里意味着定时任务是第一次执行，还没有创建对应的执行定时任务的线程，所以，就在这里把对应的线程创建出来，
             //并且缓存到jobThreadRepository这个Map中
@@ -122,6 +153,12 @@ public class ExecutorBizImpl implements ExecutorBiz {
         return ReturnT.SUCCESS;
     }
 
+    /**
+     * 调度中心远程查询执行器端日志的方法
+     *
+     * @param logParam
+     * @return
+     */
     @Override
     public ReturnT<LogResult> log(LogParam logParam) {
         //根据定时任务id和触发时间创建文件名
@@ -130,5 +167,25 @@ public class ExecutorBizImpl implements ExecutorBiz {
         LogResult logResult = XxlJobFileAppender.readLog(logFileName, logParam.getFromLineNum());
         //返回结果
         return new ReturnT<>(logResult);
+    }
+
+
+    /**
+     * 终止任务的方法
+     *
+     * @param killParam
+     * @return
+     */
+    @Override
+    public ReturnT<String> kill(KillParam killParam) {
+        //根据任务ID获取到对应的执行任务的线程
+        JobThread jobThread = XxlJobExecutor.loadJobThread(killParam.getJobId());
+        if (jobThread != null) {
+            //从Map中移除该线程，同时也终止该线程
+            XxlJobExecutor.removeJobThread(killParam.getJobId(), "scheduling center kill job.");
+            return ReturnT.SUCCESS;
+        }
+        //返回成功结果
+        return new ReturnT<>(ReturnT.SUCCESS_CODE, "job thread already killed.");
     }
 }

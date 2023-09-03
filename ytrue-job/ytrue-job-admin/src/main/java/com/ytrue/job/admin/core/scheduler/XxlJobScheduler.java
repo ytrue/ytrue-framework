@@ -34,6 +34,9 @@ public class XxlJobScheduler {
         //现在的版本并没有定时清理过期服务实例的功能
         JobRegistryHelper.getInstance().start();
 
+        //该组件的功能就是当调度中心调度任务失败的时候，发送邮件警报的
+        JobFailMonitorHelper.getInstance().start();
+
         //启动调度中心接收执行器回调信息的工作组件
         JobCompleteHelper.getInstance().start();
 
@@ -66,6 +69,7 @@ public class XxlJobScheduler {
         JobScheduleHelper.getInstance().toStop();
         JobLogReportHelper.getInstance().toStop();
         JobCompleteHelper.getInstance().toStop();
+        JobFailMonitorHelper.getInstance().toStop();
         JobRegistryHelper.getInstance().toStop();
         JobTriggerPoolHelper.toStop();
     }

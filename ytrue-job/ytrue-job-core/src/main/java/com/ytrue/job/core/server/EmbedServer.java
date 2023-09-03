@@ -2,10 +2,7 @@ package com.ytrue.job.core.server;
 
 import com.ytrue.job.core.biz.ExecutorBiz;
 import com.ytrue.job.core.biz.impl.ExecutorBizImpl;
-import com.ytrue.job.core.biz.model.IdleBeatParam;
-import com.ytrue.job.core.biz.model.LogParam;
-import com.ytrue.job.core.biz.model.ReturnT;
-import com.ytrue.job.core.biz.model.TriggerParam;
+import com.ytrue.job.core.biz.model.*;
 import com.ytrue.job.core.thread.ExecutorRegistryThread;
 import com.ytrue.job.core.util.GsonTool;
 import com.ytrue.job.core.util.ThrowableUtil;
@@ -194,6 +191,10 @@ public class EmbedServer {
                         TriggerParam triggerParam = GsonTool.fromJson(requestData, TriggerParam.class);
                         //然后交给ExecutorBizImpl对象去执行定时任务
                         return executorBiz.run(triggerParam);
+                    //走到这个分支就意味着要终止任务
+                    case "/kill":
+                        KillParam killParam = GsonTool.fromJson(requestData, KillParam.class);
+                        return executorBiz.kill(killParam);
                     case "/log":
                         //远程访问执行器端日志
                         LogParam logParam = GsonTool.fromJson(requestData, LogParam.class);

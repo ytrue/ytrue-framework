@@ -7,6 +7,7 @@ import com.ytrue.job.core.handler.annotation.XxlJob;
 import com.ytrue.job.core.handler.impl.MethodJobHandler;
 import com.ytrue.job.core.log.XxlJobFileAppender;
 import com.ytrue.job.core.server.EmbedServer;
+import com.ytrue.job.core.thread.JobLogFileCleanThread;
 import com.ytrue.job.core.thread.JobThread;
 import com.ytrue.job.core.thread.TriggerCallbackThread;
 import com.ytrue.job.core.util.IpUtil;
@@ -90,6 +91,9 @@ public class XxlJobExecutor {
         //如果是在集群情况下，可能会有多个调度中心，所以，执行器要把自己分别注册到这些调度中心上
         //这里的方法就是根据用户配置的调度中心的地址，把用来远程注册的客户端初始化好
         initAdminBizList(adminAddresses, accessToken);
+
+        //该组件的功能是用来清除执行器端的过期日志的
+        JobLogFileCleanThread.getInstance().start(logRetentionDays);
 
         //启动回调执行结果信息给调度中心的组件
         TriggerCallbackThread.getInstance().start();
@@ -190,7 +194,7 @@ public class XxlJobExecutor {
         stopEmbedServer();
         //停止真正执行定时任务的各个线程
         if (jobThreadRepository.size() > 0) {
-            for (Map.Entry<Integer, JobThread> item : jobThreadRepository.entrySet()) {
+            for (Map.Entry<Integer, JobThread> item: jobThreadRepository.entrySet()) {
                 JobThread oldJobThread = removeJobThread(item.getKey(), "web container destroy and kill the job.");
                 if (oldJobThread != null) {
                     try {
@@ -204,6 +208,8 @@ public class XxlJobExecutor {
         }
         //清空缓存jobHandler的Map
         jobHandlerRepository.clear();
+        JobLogFileCleanThread.getInstance().toStop();
+        TriggerCallbackThread.getInstance().toStop();
     }
 
 

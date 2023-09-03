@@ -65,4 +65,9 @@ public class ExecutorBizClient implements ExecutorBiz {
         return XxlJobRemotingUtil.postBody(addressUrl + "log", accessToken, timeout, logParam, LogResult.class);
     }
 
+
+    @Override
+    public ReturnT<String> kill(KillParam killParam) {
+        return XxlJobRemotingUtil.postBody(addressUrl + "kill", accessToken, timeout, killParam, String.class);
+    }
 }

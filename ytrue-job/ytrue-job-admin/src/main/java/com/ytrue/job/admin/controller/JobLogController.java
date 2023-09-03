@@ -1,5 +1,6 @@
 package com.ytrue.job.admin.controller;
 
+import com.ytrue.job.admin.core.complete.XxlJobCompleter;
 import com.ytrue.job.admin.core.exception.XxlJobException;
 import com.ytrue.job.admin.core.model.XxlJobGroup;
 import com.ytrue.job.admin.core.model.XxlJobInfo;
@@ -10,6 +11,7 @@ import com.ytrue.job.admin.dao.XxlJobGroupDao;
 import com.ytrue.job.admin.dao.XxlJobInfoDao;
 import com.ytrue.job.admin.dao.XxlJobLogDao;
 import com.ytrue.job.core.biz.ExecutorBiz;
+import com.ytrue.job.core.biz.model.KillParam;
 import com.ytrue.job.core.biz.model.LogParam;
 import com.ytrue.job.core.biz.model.LogResult;
 import com.ytrue.job.core.biz.model.ReturnT;
@@ -194,6 +196,49 @@ public class JobLogController {
             }
         } while (logIds != null && logIds.size() > 0);
         return ReturnT.SUCCESS;
+    }
+
+
+    /**
+     * 终止执行器端工作线程的方法
+     *
+     * @param id
+     * @return
+     */
+    @RequestMapping("/logKill")
+    @ResponseBody
+    public ReturnT<String> logKill(int id) {
+        XxlJobLog log = xxlJobLogDao.load(id);
+        XxlJobInfo jobInfo = xxlJobInfoDao.loadById(log.getJobId());
+
+        // 校验jobInfo是否为空，任务ID非法
+        if (jobInfo == null) {
+            return new ReturnT<>(500, I18nUtil.getString("jobinfo_glue_jobid_unvalid"));
+        }
+        // 触发状态必须是成功的，調度失敗，無法终止日誌
+        if (ReturnT.SUCCESS_CODE != log.getTriggerCode()) {
+            return new ReturnT<>(500, I18nUtil.getString("joblog_kill_log_limit"));
+        }
+
+        ReturnT<String> runResult;
+        try {
+            ExecutorBiz executorBiz = XxlJobScheduler.getExecutorBiz(log.getExecutorAddress());
+            runResult = executorBiz.kill(new KillParam(jobInfo.getId()));
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            runResult = new ReturnT<>(500, e.getMessage());
+        }
+        // 设置结果
+        if (ReturnT.SUCCESS_CODE == runResult.getCode()) {
+            log.setHandleCode(ReturnT.FAIL_CODE);
+            // 人为操作，主动终止
+            log.setHandleMsg(I18nUtil.getString("joblog_kill_log_byman") + ":" + (runResult.getMsg() != null ? runResult.getMsg() : ""));
+            log.setHandleTime(new Date());
+            XxlJobCompleter.updateHandleInfoAndFinish(log);
+            return new ReturnT<>(runResult.getMsg());
+        } else {
+            return new ReturnT<>(500, runResult.getMsg());
+        }
     }
 
 }
