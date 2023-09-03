@@ -147,6 +147,12 @@ public class XxlJobTrigger {
         triggerParam.setLogDateTime(jobLog.getTriggerTime().getTime());
 
 
+        //-----------------------分片
+        //设置分片参数
+        triggerParam.setBroadcastIndex(index);
+        triggerParam.setBroadcastTotal(total);
+
+
         //接下来要再次设定远程调用的服务实例的地址
         //这里其实是考虑到了路由策略
         String address = null;
