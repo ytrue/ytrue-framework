@@ -4,8 +4,11 @@ import com.ytrue.job.core.biz.ExecutorBiz;
 import com.ytrue.job.core.biz.model.*;
 import com.ytrue.job.core.enums.ExecutorBlockStrategyEnum;
 import com.ytrue.job.core.executor.XxlJobExecutor;
+import com.ytrue.job.core.glue.GlueFactory;
 import com.ytrue.job.core.glue.GlueTypeEnum;
 import com.ytrue.job.core.handler.IJobHandler;
+import com.ytrue.job.core.handler.impl.GlueJobHandler;
+import com.ytrue.job.core.handler.impl.ScriptJobHandler;
 import com.ytrue.job.core.log.XxlJobFileAppender;
 import com.ytrue.job.core.thread.JobThread;
 import org.slf4j.Logger;
@@ -71,10 +74,43 @@ public class ExecutorBizImpl implements ExecutorBiz {
                 }
             }
 
+        } else if (GlueTypeEnum.GLUE_GROOVY == glueTypeEnum) {
+            //走到这里，说明是glue模式，在线编辑代码然后执行的
+            //注意，这时候运行的事glue模式，就不能再使用MethodJobHandler了反射执行定时任务了，应该使用GlueJobHandler来执行任务
+            //所以下面会先判断GlueJobHandler中的gule的更新时间，和本次要执行的任务的更新时间是否相等，如果不想等说明glue的源码可能改变了，要重新
+            //创建handler和对应的工作线程
+            if (jobThread != null && !(jobThread.getHandler() instanceof GlueJobHandler && ((GlueJobHandler) jobThread.getHandler()).getGlueUpdatetime() == triggerParam.getGlueUpdatetime())) {
+                removeOldReason = "change job source or glue type, and terminate the old job thread.";
+                jobThread = null;
+                jobHandler = null;
+            }
+            if (jobHandler == null) {
+                try {//下面就可以在创建新的handler了
+                    IJobHandler originJobHandler = GlueFactory.getInstance().loadNewInstance(triggerParam.getGlueSource());
+                    jobHandler = new GlueJobHandler(originJobHandler, triggerParam.getGlueUpdatetime());
+                } catch (Exception e) {
+                    logger.error(e.getMessage(), e);
+                    return new ReturnT<>(ReturnT.FAIL_CODE, e.getMessage());
+                }
+            }
+        } else if (glueTypeEnum != null && glueTypeEnum.isScript()) {
+            if (jobThread != null && !(jobThread.getHandler() instanceof ScriptJobHandler && ((ScriptJobHandler) jobThread.getHandler()).getGlueUpdatetime() == triggerParam.getGlueUpdatetime())) {
+                // change script or gluesource updated, need kill old thread
+                removeOldReason = "change job source or glue type, and terminate the old job thread.";
+
+                jobThread = null;
+                jobHandler = null;
+            }
+
+            // valid handler
+            if (jobHandler == null) {
+                jobHandler = new ScriptJobHandler(triggerParam.getJobId(), triggerParam.getGlueUpdatetime(), triggerParam.getGlueSource(), GlueTypeEnum.match(triggerParam.getGlueType()));
+            }
         } else {
             //如果没有合适的调度模式，就返回调用失败的信息
             return new ReturnT<>(ReturnT.FAIL_CODE, "glueType[" + triggerParam.getGlueType() + "] is not valid.");
         }
+
 
         //走到这里只是判断jobThread不为null，说明执行器端已经为该定时任务创建了工作线程了
         if (jobThread != null) {

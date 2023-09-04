@@ -83,15 +83,54 @@ public class XxlJobTrigger {
             //然后把用户在web页面输入的执行器地址覆盖原来的执行器地址
             group.setAddressList(addressList.trim());
         }
-        //执行触发器任务，这里有几个参数我直接写死了，因为现在还用不到，为了不报错，我们就直接写死
-        //这里写死的都是沿用源码中设定的默认值
-        //其实这里的index和total参数分别代表分片序号和分片总数的意思，但现在我们没有引入分片，只有一台执行器
-        //执行定时任务，所以分片序号为0，分片总是为1。
-        //分片序号代表的是执行器，如果有三个执行器，那分片序号就是0，1，2
-        //分片总数就为3，这里虽然有这两个参数，实际上在第一个版本还用不到。之所以不把参数略去是因为，这样一来
-        //需要改动的地方就有点多了，大家理解一下
-        //在该方法内，会真正开始远程调用，这个方法，也是远程调用的核心方法
-        processTrigger(group, jobInfo, finalFailRetryCount, triggerType, 0, 1);
+
+        //下面就要处理分片广播的逻辑了
+        //先定义一个分片数组
+        int[] shardingParam = null;
+        //如果用户设定的分片参数不为null，其实这个参数一直都是null，不会给用户设定的机会
+        //是程序内部根据用户是否配置了分片广播策略来自动设定分片参数的
+        if (executorShardingParam != null) {
+            //如果参数不为null，那就将字符串分割一下，分割成两个，
+            String[] shardingArr = executorShardingParam.split("/");
+            //做一下校验
+            if (shardingArr.length == 2 && isNumeric(shardingArr[0]) && isNumeric(shardingArr[1])) {
+                //在这里初始化数组，容量为2数组的第一个参数就是分片序号，也就是代表的几号执行器，数组第二位就是总的分片数
+                //如果现在只有一台执行器在执行，那么数组一号位代表的就是0号执行器，2号位代表的就是只有一个分片，因为只有一个执行器执行任务
+                shardingParam = new int[2];
+                shardingParam[0] = Integer.valueOf(shardingArr[0]);
+                shardingParam[1] = Integer.valueOf(shardingArr[1]);
+            }
+        }
+
+        //下面就是具体判定用户是否配置了分片广播的路由策略，并且校验执行器组不为空
+        if (ExecutorRouteStrategyEnum.SHARDING_BROADCAST == ExecutorRouteStrategyEnum.match(jobInfo.getExecutorRouteStrategy(), null)
+            && group.getRegistryList() != null && !group.getRegistryList().isEmpty()
+            && shardingParam == null) {
+
+            //如果配置了该策略，那就遍历执行器组，并且根据执行器组中的所有执行器地址集合的容量来遍历
+            //这不就意味着有几个执行器，就要遍历几次吗？
+            for (int i = 0; i < group.getRegistryList().size(); i++) {
+                //既然是有几个执行器就要遍历几次，那正好就根据这个i去定了执行器在分片数组中的序号，如果是第一个被遍历到的执行器，就是0号执行器，以此类推。。。
+                //而总的分片数不就是执行器组中存放执行器地址集合的长度吗？
+                //这里就会自动分片，然后告诉所有的执行器，让执行器去执行任务了，这里我想强调一点，让所有执行器都开始执行任务
+                //可能很多朋友都觉得让所有执行器都开始执行相同的定时任务，不会出现并发问题吗？理论上是会的，但是定时任务是程序员自己部署的
+                //定时任务的逻辑也是程序员自己实现的，这就需要程序员自己在定时任务的逻辑中把并发问题规避了，反正你能从定时任务中
+                //得到分片参数，能得到该定时任务具体是哪个分片序号，具体情况可以看本版本代码提供的测试类
+                processTrigger(group, jobInfo, finalFailRetryCount, triggerType, i, group.getRegistryList().size());
+            }
+        } else {
+            //如果没有配置分片策略，并且executorShardingParam参数也为null，那就直接用默认的值，说明只有一个执行器要执行任务
+            if (shardingParam == null) {
+                //所以数组里只有0和1两个元素
+                shardingParam = new int[]{0, 1};
+            }
+            //这里的index和total参数分别代表分片序号和分片总数的意思，如果只有一台执行器
+            //执行定时任务，那分片序号为0，分片总是为1。
+            //分片序号代表的是执行器，如果有三个执行器，那分片序号就是0，1，2
+            //分片总数就为3
+            //在该方法内，会真正开始远程调用，这个方法，也是远程调用的核心方法
+            processTrigger(group, jobInfo, finalFailRetryCount, triggerType, shardingParam[0], shardingParam[1]);
+        }
     }
 
 
@@ -108,9 +147,11 @@ public class XxlJobTrigger {
     private static void processTrigger(XxlJobGroup group, XxlJobInfo jobInfo, int finalFailRetryCount, TriggerTypeEnum triggerType, int index, int total) {
         //获得定时任务的阻塞策略，默认是串行
         ExecutorBlockStrategyEnum blockStrategy = ExecutorBlockStrategyEnum.match(jobInfo.getExecutorBlockStrategy(), ExecutorBlockStrategyEnum.SERIAL_EXECUTION);
-
         //得到当前要调度的执行任务的路由策略，默认是没有
         ExecutorRouteStrategyEnum executorRouteStrategyEnum = ExecutorRouteStrategyEnum.match(jobInfo.getExecutorRouteStrategy(), null);
+
+        //判断路由策略是否等于分片广播，如果等于，就把分片参数拼接成字符串   1/10 , 2/10
+        String shardingParam = (ExecutorRouteStrategyEnum.SHARDING_BROADCAST == executorRouteStrategyEnum) ? String.valueOf(index).concat("/").concat(String.valueOf(total)) : null;
 
         //这里就要开始执行和定时任务日志相关的操作了
         //先创建一个日志对象，用于记录该定时任务执行是的一些信息
@@ -139,6 +180,11 @@ public class XxlJobTrigger {
         //设置执行模式，一般都是bean模式
         triggerParam.setGlueType(jobInfo.getGlueType());
 
+        // -----------------------------glue
+        //设置glue在线编辑的代码内容
+        triggerParam.setGlueSource(jobInfo.getGlueSource());
+        //设置glue的更新时间
+        triggerParam.setGlueUpdatetime(jobInfo.getGlueUpdatetime().getTime());
 
         // ------------------------新增日志参数
         //设置定时任务的日志id
@@ -157,18 +203,29 @@ public class XxlJobTrigger {
         //这里其实是考虑到了路由策略
         String address = null;
         ReturnT<String> routeAddressResult = null;
+
         //得到所有注册到服务端的执行器的地址
         List<String> registryList = group.getRegistryList();
-        // 判空处理
         if (registryList != null && !registryList.isEmpty()) {
-            //在这里根据路由策略获得最终选用的执行器地址
-            routeAddressResult = executorRouteStrategyEnum.getRouter().route(triggerParam, registryList);
-            if (routeAddressResult.getCode() == ReturnT.SUCCESS_CODE) {
-                address = routeAddressResult.getContent();
+            // 如果是分片
+            if (ExecutorRouteStrategyEnum.SHARDING_BROADCAST == executorRouteStrategyEnum) {
+                //如果是分片广播，就用分片数组中的参数选取对应的执行器地址
+                if (index < group.getRegistryList().size()) {
+                    address = group.getRegistryList().get(index);
+                } else {
+                    //如果走到这里说明上面的索引超过集合长度了，这就出错了，所以直接用默认值0号索引
+                    address = group.getRegistryList().get(0);
+                }
             } else {
-                //如果没得到地址，就赋值失败，这里还用不到这个失败结果，但是先列出来吧
-                routeAddressResult = new ReturnT<>(ReturnT.FAIL_CODE, I18nUtil.getString("jobconf_trigger_address_empty"));
+                //走到这里说明不是分片广播，那就根据路由策略获得最终选用的执行器地址
+                routeAddressResult = executorRouteStrategyEnum.getRouter().route(triggerParam, registryList);
+                if (routeAddressResult.getCode() == ReturnT.SUCCESS_CODE) {
+                    address = routeAddressResult.getContent();
+                }
             }
+        } else {
+            //如果没得到地址，就赋值失败，这里还用不到这个失败结果，但是先列出来吧
+            routeAddressResult = new ReturnT<>(ReturnT.FAIL_CODE, I18nUtil.getString("jobconf_trigger_address_empty"));
         }
 
         //接下来就定义一个远程调用的结果变量
@@ -200,11 +257,10 @@ public class XxlJobTrigger {
         triggerMsgSb.append("<br>").append(I18nUtil.getString("jobconf_trigger_exe_regaddress")).append("：").append(group.getRegistryList());
         // 路由策略
         triggerMsgSb.append("<br>").append(I18nUtil.getString("jobinfo_field_executorRouteStrategy")).append("：").append(executorRouteStrategyEnum.getTitle());
-
-        //注释的都是暂时用不上的
-//        if (shardingParam != null) {
-//            triggerMsgSb.append("("+shardingParam+")");
-//        }
+        // 分片
+        if (shardingParam != null) {
+            triggerMsgSb.append("(" + shardingParam + ")");
+        }
         triggerMsgSb.append("<br>").append(I18nUtil.getString("jobinfo_field_executorBlockStrategy")).append("：").append(blockStrategy.getTitle());
         // 任务超时时间
         triggerMsgSb.append("<br>").append(I18nUtil.getString("jobinfo_field_timeout")).append("：").append(jobInfo.getExecutorTimeout());
@@ -221,7 +277,8 @@ public class XxlJobTrigger {
         jobLog.setExecutorHandler(jobInfo.getExecutorHandler());
         //设置执行参数
         jobLog.setExecutorParam(jobInfo.getExecutorParam());
-        //jobLog.setExecutorShardingParam(shardingParam);
+        //设置分片参数
+        jobLog.setExecutorShardingParam(shardingParam);
         //设置失败重试次数
         jobLog.setExecutorFailRetryCount(finalFailRetryCount);
         //设置触发结果码
@@ -262,4 +319,13 @@ public class XxlJobTrigger {
         return runResult;
     }
 
+
+    private static boolean isNumeric(String str) {
+        try {
+            int result = Integer.valueOf(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
 }

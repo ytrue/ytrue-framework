@@ -17,8 +17,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * @author ytrue
@@ -191,9 +190,37 @@ public class JobThread extends Thread {
                     //这里会向logFileName文件中记录一下日志，记录的就是下面的这句话，定时任务开始执行了
                     XxlJobHelper.log("<br>----------- xxl-job job execute start -----------<br>----------- Param:" + xxlJobContext.getJobParam());
 
-                    //通过反射执行了定时任务，终于在这里执行了
-                    handler.execute();
-
+                    //如果设置了超时时间，就要设置一个新的线程来执行定时任务
+                    if (triggerParam.getExecutorTimeout() > 0) {
+                        Thread futureThread = null;
+                        try {
+                            FutureTask<Boolean> futureTask = new FutureTask<>(() -> {
+                                //子线程可以访问父线程的本地变量
+                                XxlJobContext.setXxlJobContext(xxlJobContext);
+                                //在FutureTask中执行定时任务
+                                handler.execute();
+                                return true;
+                            });
+                            //创建线程并且启动线程
+                            futureThread = new Thread(futureTask);
+                            futureThread.start();
+                            //最多等待用户设置的超时时间
+                            // 通过创建一个FutureTask来执行定时任务，然后让一个新的线程来执行这个FutureTask。
+                            // 在超时时间之内没有获得执行结果，就意味着定时任务超时了。
+                            // 这时候程序就会走到catch块中，将定时任务的执行结果设置为失败。这就是定时任务超时的简单逻辑。
+                            Boolean tempResult = futureTask.get(triggerParam.getExecutorTimeout(), TimeUnit.SECONDS);
+                        } catch (TimeoutException e) {
+                            XxlJobHelper.log("<br>----------- xxl-job job execute timeout");
+                            XxlJobHelper.log(e);
+                            //超时直接设置任务执行超时
+                            XxlJobHelper.handleTimeout("job execute timeout ");
+                        } finally {
+                            futureThread.interrupt();
+                        }
+                    } else {
+                        //没有设置超时时间，//通过反射执行了定时任务，终于在这里执行了
+                        handler.execute();
+                    }
                     //定时任务执行了，所以这里要判断一下执行结果是什么，注意，这里的XxlJobContext上下文对象
                     //从创建的时候就默认执行结果为成功。在源码中，在这行代码之前其实还有任务执行超时时间的判断，开启一个子线程去执行定时任务
                     //然后再判断任务执行成功了没，如果没成功XxlJobHelper类就会修改上下文对象的执行结果。等我们引入任务超时的功能后，这里的逻辑就会更丰富了

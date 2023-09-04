@@ -13,6 +13,7 @@
     <name>ytrue-job-executor-samples-01</name>
     <modules>
         <module>ytrue-job-executor-sample-springboot-01</module>
+        <module>ytrue-job-executor-sample-frameless-01</module>
     </modules>
 
     <properties>
