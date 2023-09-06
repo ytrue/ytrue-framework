@@ -1,7 +1,8 @@
 package com.ytrue.gateway.core.session;
 
-import com.ytrue.gateway.core.bind.GenericReferenceRegistry;
 import com.ytrue.gateway.core.bind.IGenericReference;
+import com.ytrue.gateway.core.bind.MapperRegistry;
+import com.ytrue.gateway.core.mapping.HttpStatement;
 import org.apache.dubbo.config.ApplicationConfig;
 import org.apache.dubbo.config.ReferenceConfig;
 import org.apache.dubbo.config.RegistryConfig;
@@ -12,46 +13,41 @@ import java.util.Map;
 
 /**
  * @author ytrue
- * @date 2023-09-06 14:21
- * @description 会话生命周期配置项
+ * @date 2023-09-06 16:57
+ * @description Configuration
  */
 public class Configuration {
 
 
-    /**
-     * 泛化调用注册器
-     */
-    private final GenericReferenceRegistry registry = new GenericReferenceRegistry(this);
+    private final MapperRegistry mapperRegistry = new MapperRegistry(this);
 
+    private final Map<String, HttpStatement> httpStatements = new HashMap<>();
 
     /**
-     * DUBBO 应用服务配置项 api-gateway-test
+     * RPC 应用服务配置项 api-gateway-test
      */
     private final Map<String, ApplicationConfig> applicationConfigMap = new HashMap<>();
-
     /**
-     * DUBBO 注册中心配置项 zookeeper://127.0.0.1:2181
+     * RPC 注册中心配置项 zookeeper://127.0.0.1:2181
      */
     private final Map<String, RegistryConfig> registryConfigMap = new HashMap<>();
-
     /**
-     * DUBBO 泛化服务配置项 com.ytrue.gateway.rpc.IActivityBooth
+     * RPC 泛化服务配置项 cn.bugstack.gateway.rpc.IActivityBooth
      */
     private final Map<String, ReferenceConfig<GenericService>> referenceConfigMap = new HashMap<>();
 
 
+
     public Configuration() {
-        // dubbo 的基本配置
+        // TODO 后期从配置中获取
         ApplicationConfig application = new ApplicationConfig();
         application.setName("api-gateway-test");
         application.setQosEnable(false);
 
-        // 注册中心配置
         RegistryConfig registry = new RegistryConfig();
         registry.setAddress("zookeeper://127.0.0.1:2181");
         registry.setRegister(false);
 
-        // 泛化服务配置项
         ReferenceConfig<GenericService> reference = new ReferenceConfig<>();
         reference.setInterface("cn.bugstack.gateway.rpc.IActivityBooth");
         reference.setVersion("1.0.0");
@@ -63,7 +59,7 @@ public class Configuration {
     }
 
 
-    // ------------------------------------ GET  AND SET
+    //------------------------get and set
     public ApplicationConfig getApplicationConfig(String applicationName) {
         return applicationConfigMap.get(applicationName);
     }
@@ -76,11 +72,19 @@ public class Configuration {
         return referenceConfigMap.get(interfaceName);
     }
 
-    public void addGenericReference(String application, String interfaceName, String methodName) {
-        registry.addGenericReference(application, interfaceName, methodName);
+    public void addMapper(HttpStatement httpStatement) {
+        mapperRegistry.addMapper(httpStatement);
     }
 
-    public IGenericReference getGenericReference(String methodName) {
-        return registry.getGenericReference(methodName);
+    public IGenericReference getMapper(String uri, GatewaySession gatewaySession) {
+        return mapperRegistry.getMapper(uri, gatewaySession);
+    }
+
+    public void addHttpStatement(HttpStatement httpStatement) {
+        httpStatements.put(httpStatement.getUri(), httpStatement);
+    }
+
+    public HttpStatement getHttpStatement(String uri) {
+        return httpStatements.get(uri);
     }
 }

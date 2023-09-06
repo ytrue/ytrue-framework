@@ -1,4 +1,4 @@
-package com.ytrue.gateway.core.session;
+package com.ytrue.gateway.core.socket;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;

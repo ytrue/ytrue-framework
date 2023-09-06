@@ -1,6 +1,7 @@
-package com.ytrue.gateway.core.session;
+package com.ytrue.gateway.core.socket;
 
-import com.ytrue.gateway.core.session.handlers.SessionServerHandler;
+import com.ytrue.gateway.core.session.defaults.DefaultGatewaySessionFactory;
+import com.ytrue.gateway.core.socket.handlers.GatewayServerHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
@@ -12,13 +13,14 @@ import io.netty.handler.codec.http.HttpServerCodec;
  * @date 2023-09-06 11:24
  * @description SessionChannelInitializer
  */
-public class SessionChannelInitializer extends ChannelInitializer<SocketChannel> {
+public class GatewayChannelInitializer extends ChannelInitializer<SocketChannel> {
 
-    private final Configuration configuration;
+    private final DefaultGatewaySessionFactory gatewaySessionFactory;
 
-    public SessionChannelInitializer(Configuration configuration) {
-        this.configuration = configuration;
+    public GatewayChannelInitializer(DefaultGatewaySessionFactory gatewaySessionFactory) {
+        this.gatewaySessionFactory = gatewaySessionFactory;
     }
+
     @Override
     protected void initChannel(SocketChannel channel) throws Exception {
         ChannelPipeline line = channel.pipeline();
@@ -28,7 +30,7 @@ public class SessionChannelInitializer extends ChannelInitializer<SocketChannel>
 
         line.addLast(new HttpServerCodec());
         line.addLast(new HttpObjectAggregator(1024 * 1024));
-        line.addLast(new SessionServerHandler(configuration));
+        line.addLast(new GatewayServerHandler(gatewaySessionFactory));
 
     }
 }

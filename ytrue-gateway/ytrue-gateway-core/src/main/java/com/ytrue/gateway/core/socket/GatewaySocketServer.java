@@ -1,5 +1,7 @@
-package com.ytrue.gateway.core.session;
+package com.ytrue.gateway.core.socket;
 
+import com.ytrue.gateway.core.session.Configuration;
+import com.ytrue.gateway.core.session.defaults.DefaultGatewaySessionFactory;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -18,10 +20,10 @@ import java.util.concurrent.Callable;
  * @date 2023-09-06 11:19
  * @description 网关会话服务
  */
-public class SessionServer implements Callable<Channel> {
+public class GatewaySocketServer implements Callable<Channel> {
 
 
-    private final Logger logger = LoggerFactory.getLogger(SessionServer.class);
+    private final Logger logger = LoggerFactory.getLogger(GatewaySocketServer.class);
 
     /**
      * boss
@@ -42,22 +44,21 @@ public class SessionServer implements Callable<Channel> {
     /**
      * 配置类
      */
-    private Configuration configuration;
+    private DefaultGatewaySessionFactory gatewaySessionFactory;
 
-    public SessionServer(Configuration configuration) {
-        this.configuration = configuration;
+    public GatewaySocketServer(DefaultGatewaySessionFactory gatewaySessionFactory) {
+        this.gatewaySessionFactory = gatewaySessionFactory;
     }
 
     @Override
-    public Channel call() throws Exception {
+    public Channel call() {
         ChannelFuture channelFuture = null;
         try {
             ServerBootstrap b = new ServerBootstrap();
-
             b.group(boss, work);
             b.channel(NioServerSocketChannel.class);
             b.option(ChannelOption.SO_BACKLOG, 128);
-            b.childHandler(new SessionChannelInitializer(configuration));
+            b.childHandler(new GatewayChannelInitializer(gatewaySessionFactory));
 
             // syncUninterruptibly 不会被中断的sync
             channelFuture = b.bind(new InetSocketAddress(7397)).syncUninterruptibly();

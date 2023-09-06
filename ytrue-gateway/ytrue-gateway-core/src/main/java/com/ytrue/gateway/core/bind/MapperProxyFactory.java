@@ -1,9 +1,10 @@
 package com.ytrue.gateway.core.bind;
 
+import com.ytrue.gateway.core.mapping.HttpStatement;
+import com.ytrue.gateway.core.session.GatewaySession;
 import net.sf.cglib.core.Signature;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.InterfaceMaker;
-import org.apache.dubbo.rpc.service.GenericService;
 import org.objectweb.asm.Type;
 
 import java.util.Map;
@@ -11,51 +12,43 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author ytrue
- * @date 2023-09-06 14:34
- * @description 泛化调用静态代理工厂
+ * @date 2023-09-06 17:07
+ * @description MapperProxyFactory
  */
-public class GenericReferenceProxyFactory {
-
+public class MapperProxyFactory {
     /**
-     * dubbo 泛化调用服务
+     * 接口url
      */
-    private final GenericService genericService;
-
-    /**
-     * 调用者关系衍射
-     */
-    private final Map<String, IGenericReference> genericReferenceCache = new ConcurrentHashMap<>();
-
+    private String uri;
 
     /**
      * 构造
      *
-     * @param genericService
+     * @param uri
      */
-    public GenericReferenceProxyFactory(GenericService genericService) {
-        this.genericService = genericService;
+    public MapperProxyFactory(String uri) {
+        this.uri = uri;
     }
 
-
     /**
-     * 创建实例
-     *
-     * @param method
-     * @return
+     * 缓存
      */
-    public IGenericReference newInstance(String method) {
-        return genericReferenceCache.computeIfAbsent(method, k -> {
-            // 泛化调用
-            GenericReferenceProxy genericReferenceProxy = new GenericReferenceProxy(genericService, method);
+    private final Map<String, IGenericReference> genericReferenceCache = new ConcurrentHashMap<>();
 
-            // 创建了一个 InterfaceMaker 对象，用于生成动态接口。
+
+    public IGenericReference newInstance(GatewaySession gatewaySession) {
+        return genericReferenceCache.computeIfAbsent(uri, k -> {
+            HttpStatement httpStatement = gatewaySession.getConfiguration().getHttpStatement(uri);
+            // 泛化调用
+            MapperProxy genericReferenceProxy = new MapperProxy(gatewaySession, uri);
+            // 创建接口
             InterfaceMaker interfaceMaker = new InterfaceMaker();
             // 使用 add() 方法向 InterfaceMaker 添加一个方法签名。
             // 这里的 method 是一个 Method 对象，它定义了方法的名称、返回类型和参数类型。
             // Signature 对象表示方法的签名，其中包含了方法的名称、返回类型和参数类型的信息。第二个参数 null 是方法体（Body），在这个例子中为 null，表示没有具体的实现。
             interfaceMaker.add(new Signature(
                     // 创建的方法
-                    method,
+                    httpStatement.getMethodName(),
                     // 方法的返回类型
                     Type.getType(String.class),
                     // 方法的参数
@@ -77,4 +70,5 @@ public class GenericReferenceProxyFactory {
             return (IGenericReference) enhancer.create();
         });
     }
+
 }
