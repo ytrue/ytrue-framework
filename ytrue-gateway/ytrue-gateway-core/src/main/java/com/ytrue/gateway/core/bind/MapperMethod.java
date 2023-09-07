@@ -5,6 +5,7 @@ import com.ytrue.gateway.core.session.Configuration;
 import com.ytrue.gateway.core.session.GatewaySession;
 
 import java.lang.reflect.Method;
+import java.util.Map;
 
 /**
  * @author ytrue
@@ -14,9 +15,9 @@ import java.lang.reflect.Method;
 public class MapperMethod {
 
     /**
-     * url
+     * methodName
      */
-    private String uri;
+    private String methodName;
 
     /**
      * 请求类型
@@ -24,17 +25,18 @@ public class MapperMethod {
     private final HttpCommandType command;
 
     public MapperMethod(String uri, Method method, Configuration configuration) {
-        this.uri = uri;
+        this.methodName = configuration.getHttpStatement(uri).getMethodName();
         this.command = configuration.getHttpStatement(uri).getHttpCommandType();
     }
 
-    public Object execute(GatewaySession session, Object args) {
+    public Object execute(GatewaySession session, Map<String, Object> params) {
         Object result = null;
         switch (command) {
             case GET:
-                result = session.get(uri, args);
+                result = session.get(methodName, params);
                 break;
             case POST:
+                result = session.post(methodName, params);
                 break;
             case PUT:
                 break;

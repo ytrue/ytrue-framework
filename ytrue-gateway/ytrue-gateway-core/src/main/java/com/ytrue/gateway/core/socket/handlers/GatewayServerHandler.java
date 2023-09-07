@@ -1,13 +1,16 @@
 package com.ytrue.gateway.core.socket.handlers;
 
-import com.google.gson.Gson;
-import com.ytrue.gateway.core.bind.IGenericReference;
-import com.ytrue.gateway.core.session.GatewaySession;
-import com.ytrue.gateway.core.session.defaults.DefaultGatewaySessionFactory;
+import com.ytrue.gateway.core.mapping.HttpStatement;
+import com.ytrue.gateway.core.session.Configuration;
 import com.ytrue.gateway.core.socket.BaseHandler;
+import com.ytrue.gateway.core.socket.agreement.AgreementConstants;
+import com.ytrue.gateway.core.socket.agreement.GatewayResultMessage;
+import com.ytrue.gateway.core.socket.agreement.RequestParser;
+import com.ytrue.gateway.core.socket.agreement.ResponseParser;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,51 +24,34 @@ public class GatewayServerHandler extends BaseHandler<FullHttpRequest> {
     private final Logger logger = LoggerFactory.getLogger(GatewayServerHandler.class);
 
 
-    private final DefaultGatewaySessionFactory gatewaySessionFactory;
+    private final Configuration configuration;
 
-    public GatewayServerHandler(DefaultGatewaySessionFactory gatewaySessionFactory) {
-        this.gatewaySessionFactory = gatewaySessionFactory;
+    public GatewayServerHandler(Configuration configuration) {
+        this.configuration = configuration;
     }
 
 
     @Override
     protected void session(ChannelHandlerContext ctx, final Channel channel, FullHttpRequest request) {
-        logger.info("网关接收请求 uri：{} method：{}", request.uri(), request.method());
+        logger.info("网关接收请求【全局】 uri：{} method：{}", request.uri(), request.method());
 
+        try {
+            // 1. 解析参数
+            RequestParser requestParser = new RequestParser(request);
+            String uri = requestParser.getUri();
 
-        // 返回信息控制：简单处理
-        String uri = request.uri();
-        if (uri.equals("/favicon.ico")) return;
+            // 2. 保存信息；HttpStatement、Header=token
+            HttpStatement httpStatement = configuration.getHttpStatement(uri);
+            channel.attr(AgreementConstants.HTTP_STATEMENT).set(httpStatement);
 
-
-        // 服务泛化调用
-        GatewaySession gatewaySession = gatewaySessionFactory.openSession();
-        IGenericReference reference = gatewaySession.getMapper(uri);
-        String result = reference.$invoke("test") + " " + System.currentTimeMillis();
-
-
-        // 返回信息处理
-        DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-
-        // 返回信息控制
-        Gson gson = new Gson();
-        byte[] data = gson.toJson(result).getBytes();
-        response.content().writeBytes(data);
-        // 头部信息设置
-        HttpHeaders heads = response.headers();
-        // 返回内容类型
-        heads.add(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON + "; charset=UTF-8");
-        // 响应体的长度
-        heads.add(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
-        // 配置持久连接
-        heads.add(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
-        // 配置跨域访问
-        heads.add(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
-        heads.add(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, "*");
-        heads.add(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, PUT, DELETE");
-        heads.add(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
-
-        channel.writeAndFlush(response);
+            // 3. 放行服务
+            request.retain();
+            ctx.fireChannelRead(request);
+        } catch (Exception e) {
+            // 4. 封装返回结果
+            DefaultFullHttpResponse response = new ResponseParser().parse(GatewayResultMessage.buildError(AgreementConstants.ResponseCode._500.getCode(), "网关协议调用失败！" + e.getMessage()));
+            channel.writeAndFlush(response);
+        }
     }
 
 }

@@ -10,7 +10,8 @@ public interface GatewaySessionFactory {
     /**
      * 创建GatewaySession
      *
+     * @param uri
      * @return
      */
-    GatewaySession openSession();
+    GatewaySession openSession(String uri);
 }

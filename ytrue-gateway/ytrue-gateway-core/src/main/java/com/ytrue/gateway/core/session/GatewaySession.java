@@ -2,6 +2,8 @@ package com.ytrue.gateway.core.session;
 
 import com.ytrue.gateway.core.bind.IGenericReference;
 
+import java.util.Map;
+
 /**
  * @author ytrue
  * @date 2023-09-06 17:00
@@ -10,22 +12,31 @@ import com.ytrue.gateway.core.bind.IGenericReference;
 public interface GatewaySession {
 
     /**
-     * rpc调用
+     * get rpc调用
      *
-     * @param uri
-     * @param parameter
+     * @param methodName
+     * @param params
      * @return
      */
-    Object get(String uri, Object parameter);
+    Object get(String methodName, Map<String, Object> params);
+
+    /**
+     * post rpc调用
+     *
+     * @param methodName
+     * @param params
+     * @return
+     */
+    Object post(String methodName, Map<String, Object> params);
 
 
     /**
      * 获取衍射
      *
-     * @param uri
+     * @param
      * @return
      */
-    IGenericReference getMapper(String uri);
+    IGenericReference getMapper();
 
     /**
      * 获取配置

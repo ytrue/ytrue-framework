@@ -1,5 +1,9 @@
 package com.ytrue.gateway.core.bind;
 
+import com.ytrue.gateway.core.executor.result.SessionResult;
+
+import java.util.Map;
+
 /**
  * @author ytrue
  * @date 2023-09-06 14:18
@@ -11,8 +15,8 @@ public interface IGenericReference {
     /**
      * 调用
      *
-     * @param args
+     * @param params
      * @return
      */
-    String $invoke(String args);
+    SessionResult $invoke(Map<String, Object> params);
 }

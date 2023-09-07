@@ -30,19 +30,32 @@ public class ApiTest {
     public void test_gateway() throws InterruptedException, ExecutionException {
         // 1. 创建配置信息加载注册
         Configuration configuration = new Configuration();
+        configuration.setHostName("127.0.0.1");
+        configuration.setPort(7397);
+
+        configuration.registryConfig(
+                "api-gateway-test",
+                "zookeeper://127.0.0.1:2181",
+                "cn.bugstack.gateway.rpc.IActivityBooth",
+                "1.0.0"
+        );
+
+
         HttpStatement httpStatement = new HttpStatement(
                 "api-gateway-test",
                 "cn.bugstack.gateway.rpc.IActivityBooth",
                 "sayHi",
+                "java.lang.String",
                 "/wg/activity/sayHi",
-                HttpCommandType.GET);
+                HttpCommandType.GET,true);
+
         configuration.addMapper(httpStatement);
 
         // 2. 基于配置构建会话工厂
         DefaultGatewaySessionFactory gatewaySessionFactory = new DefaultGatewaySessionFactory(configuration);
 
         // 3. 创建启动网关网络服务
-        GatewaySocketServer server = new GatewaySocketServer(gatewaySessionFactory);
+        GatewaySocketServer server = new GatewaySocketServer(configuration, gatewaySessionFactory);
 
         Future<Channel> future = Executors.newFixedThreadPool(2).submit(server);
         Channel channel = future.get();
