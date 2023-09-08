@@ -10,6 +10,8 @@
     <name>ytrue-gateway</name>
     <modules>
         <module>ytrue-gateway-core</module>
+        <module>ytrue-gateway-center</module>
+
     </modules>
 
 
@@ -17,10 +19,22 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <spring-boot.version>2.6.0</spring-boot.version>
     </properties>
 
 
+    <dependencyManagement>
     <dependencies>
-
+        <!--springboot依赖管理-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-dependencies</artifactId>
+            <version>${spring-boot.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
     </dependencies>
+    </dependencyManagement>
+
+
 </project>

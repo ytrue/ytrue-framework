@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ytrue.gateway.center.infrastructure.dao.IGatewayServerDao">
+
+    <resultMap id="gatewayServerMap" type="com.ytrue.gateway.center.infrastructure.po.GatewayServer">
+        <id column="id" property="id"/>
+        <id column="group_id" property="groupId"/>
+        <id column="group_name" property="groupName"/>
+    </resultMap>
+
+    <select id="queryGatewayServerList" resultMap="gatewayServerMap">
+        SELECT id, group_id, group_name FROM gateway_server
+    </select>
+
+    <select id="queryGatewayServerListByPage" parameterType="com.ytrue.gateway.center.infrastructure.common.OperationRequest" resultMap="gatewayServerMap">
+         SELECT id, group_id, group_name FROM gateway_server
+        <where>
+            <if test="null != data">
+                and group_id = #{data}
+            </if>
+        </where>
+        order by id desc
+        limit #{pageStart},#{pageEnd}
+    </select>
+
+    <select id="queryGatewayServerListCountByPage" parameterType="com.ytrue.gateway.center.infrastructure.common.OperationRequest" resultType="java.lang.Integer">
+        SELECT count(id) FROM gateway_server
+        <where>
+            <if test="null != data">
+                and group_id = #{data}
+            </if>
+        </where>
+    </select>
+
+</mapper>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ytrue.gateway.center.infrastructure.dao.IApplicationSystemDao">
+
+    <resultMap id="applicationSystemMap" type="com.ytrue.gateway.center.infrastructure.po.ApplicationSystem">
+        <id column="id" property="id"/>
+        <id column="system_id" property="systemId"/>
+        <id column="system_name" property="systemName"/>
+        <id column="system_type" property="systemType"/>
+        <id column="system_registry" property="systemRegistry"/>
+        <id column="create_time" property="createTime"/>
+        <id column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.ytrue.gateway.center.infrastructure.po.ApplicationSystem">
+        INSERT INTO application_system(system_id, system_name, system_type, system_registry, create_time, update_time)
+        VALUES (#{systemId}, #{systemName}, #{systemType}, #{systemRegistry}, NOW(), NOW());
+    </insert>
+
+    <select id="queryApplicationSystemList" parameterType="java.util.List" resultMap="applicationSystemMap">
+        SELECT id, system_id, system_name, system_type, system_registry
+        FROM application_system
+        <where>
+            <if test="list != null">
+                system_id in
+                <foreach collection="list" index="idx" item="ids" open="(" close=")" separator=",">
+                    #{ids}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <select id="queryApplicationSystemListByPage" parameterType="com.ytrue.gateway.center.infrastructure.common.OperationRequest" resultMap="applicationSystemMap">
+        SELECT id, system_id, system_name, system_type, system_registry
+        FROM application_system
+        <where>
+            <if test="data != null and data.systemId != ''">
+                and system_id = #{data.systemId}
+            </if>
+            <if test="data != null and data.systemName != ''">
+                and system_name = #{data.systemName}
+            </if>
+        </where>
+        order by id desc
+        limit #{pageStart},#{pageEnd}
+    </select>
+
+    <select id="queryApplicationSystemListCountByPage" parameterType="com.ytrue.gateway.center.infrastructure.common.OperationRequest" resultType="java.lang.Integer">
+        SELECT count(id) FROM application_system
+        <where>
+            <if test="data != null and data.systemId != ''">
+                and system_id = #{data.systemId}
+            </if>
+            <if test="data != null and data.systemName != ''">
+                and system_name = #{data.systemName}
+            </if>
+        </where>
+    </select>
+
+</mapper>

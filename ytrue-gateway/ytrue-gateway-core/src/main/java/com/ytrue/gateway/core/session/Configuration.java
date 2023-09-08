@@ -53,7 +53,7 @@ public class Configuration {
      */
     private final Map<String, RegistryConfig> registryConfigMap = new HashMap<>();
     /**
-     * RPC 泛化服务配置项 cn.bugstack.gateway.rpc.IActivityBooth
+     * RPC 泛化服务配置项 com.ytrue.gateway.rpc.IActivityBooth
      */
     private final Map<String, ReferenceConfig<GenericService>> referenceConfigMap = new HashMap<>();
 

@@ -30,7 +30,7 @@ public class HttpStatement {
 
 
     /**
-     * 参数类型(RPC 限定单参数注册)；new String[]{"java.lang.String"}、new String[]{"cn.bugstack.gateway.rpc.dto.XReq"}
+     * 参数类型(RPC 限定单参数注册)；new String[]{"java.lang.String"}、new String[]{"com.ytrue.gateway.rpc.dto.XReq"}
      */
     private String parameterType;
 

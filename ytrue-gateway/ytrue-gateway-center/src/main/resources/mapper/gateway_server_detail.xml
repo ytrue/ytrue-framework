@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ytrue.gateway.center.infrastructure.dao.IGatewayServerDetailDao">
+
+    <resultMap id="gatewayServerDetailMap" type="com.ytrue.gateway.center.infrastructure.po.GatewayServerDetail">
+        <id column="id" property="id"/>
+        <id column="group_id" property="groupId"/>
+        <id column="gateway_id" property="gatewayId"/>
+        <id column="gateway_name" property="gatewayName"/>
+        <id column="gateway_address" property="gatewayAddress"/>
+        <id column="status" property="status"/>
+        <id column="create_time" property="createTime"/>
+        <id column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.ytrue.gateway.center.infrastructure.po.GatewayServerDetail">
+        INSERT INTO gateway_server_detail(group_id, gateway_id, gateway_name, gateway_address, status, create_time, update_time)
+        VALUES (#{groupId}, #{gatewayId}, #{gatewayName}, #{gatewayAddress}, #{status}, NOW(), NOW());
+    </insert>
+
+    <select id="queryGatewayServerDetail" parameterType="java.lang.String" resultMap="gatewayServerDetailMap">
+        SELECT gateway_id, gateway_name, gateway_address, status
+        FROM gateway_server_detail
+        WHERE gateway_id = #{gatewayId} AND gateway_address = #{gatewayAddress}
+    </select>
+
+    <update id="updateGatewayStatus" parameterType="com.ytrue.gateway.center.infrastructure.po.GatewayServerDetail">
+        UPDATE gateway_server_detail
+        SET status = #{status}
+        WHERE gateway_id = #{gatewayId} AND gateway_address = #{gatewayAddress}
+    </update>
+
+    <select id="queryGatewayServerDetailList" resultMap="gatewayServerDetailMap">
+        SELECT id, group_id, gateway_id, gateway_name, gateway_address, status, create_time, update_time
+        FROM gateway_server_detail
+    </select>
+
+    <select id="queryGatewayServerDetailListByPage"
+            parameterType="com.ytrue.gateway.center.infrastructure.common.OperationRequest"
+            resultMap="gatewayServerDetailMap">
+        SELECT id, group_id, gateway_id, gateway_name, gateway_address, status, create_time, update_time
+        FROM gateway_server_detail
+        <where>
+            <if test="data != null and data.groupId != ''">
+                and group_id = #{data.groupId}
+            </if>
+            <if test="data != null and data.gatewayId != ''">
+                and gateway_id = #{data.gatewayId}
+            </if>
+        </where>
+        order by id desc
+        limit #{pageStart},#{pageEnd}
+    </select>
+
+    <select id="queryGatewayServerDetailListCountByPage"
+            parameterType="com.ytrue.gateway.center.infrastructure.common.OperationRequest"
+            resultType="java.lang.Integer">
+        SELECT count(id) FROM gateway_server_detail
+        <where>
+            <if test="data != null and data.groupId != ''">
+                and group_id = #{data.groupId}
+            </if>
+            <if test="data != null and data.gatewayId != ''">
+                and gateway_id = #{data.gatewayId}
+            </if>
+        </where>
+    </select>
+
+</mapper>

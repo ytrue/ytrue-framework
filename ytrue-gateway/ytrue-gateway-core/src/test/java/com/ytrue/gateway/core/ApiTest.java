@@ -36,14 +36,14 @@ public class ApiTest {
         configuration.registryConfig(
                 "api-gateway-test",
                 "zookeeper://127.0.0.1:2181",
-                "cn.bugstack.gateway.rpc.IActivityBooth",
+                "com.ytrue.gateway.rpc.IActivityBooth",
                 "1.0.0"
         );
 
 
         HttpStatement httpStatement = new HttpStatement(
                 "api-gateway-test",
-                "cn.bugstack.gateway.rpc.IActivityBooth",
+                "com.ytrue.gateway.rpc.IActivityBooth",
                 "sayHi",
                 "java.lang.String",
                 "/wg/activity/sayHi",
