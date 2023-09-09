@@ -11,6 +11,9 @@
     <modules>
         <module>ytrue-gateway-core</module>
         <module>ytrue-gateway-center</module>
+        <module>ytrue-gateway-assist</module>
+        <module>ytrue-gateway-engine</module>
+        <module>ytrue-gateway-sdk</module>
 
     </modules>
 

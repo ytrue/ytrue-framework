@@ -234,7 +234,7 @@ public class GatewayConfigManage {
             //      "systemType": "RPC",
             //      "interfaceList": [
             //        {
-            //          "interfaceId": "cn.bugstack.gateway.rpc.IActivityBooth",
+            //          "interfaceId": "com.ytrue.gateway.rpc.IActivityBooth",
             //          "interfaceName": "活动服务",
             //          "interfaceVersion": "1.0.0",
             //          "systemId": "api-gateway-test-provider",
@@ -242,17 +242,17 @@ public class GatewayConfigManage {
             //            {
             //              "auth": 1,
             //              "httpCommandType": "POST",
-            //              "interfaceId": "cn.bugstack.gateway.rpc.IActivityBooth",
+            //              "interfaceId": "com.ytrue.gateway.rpc.IActivityBooth",
             //              "methodId": "insert",
             //              "methodName": "插入方法",
-            //              "parameterType": "cn.bugstack.gateway.rpc.dto.XReq",
+            //              "parameterType": "com.ytrue.gateway.rpc.dto.XReq",
             //              "systemId": "api-gateway-test-provider",
             //              "uri": "/wg/activity/insert"
             //            },
             //            {
             //              "auth": 0,
             //              "httpCommandType": "GET",
-            //              "interfaceId": "cn.bugstack.gateway.rpc.IActivityBooth",
+            //              "interfaceId": "com.ytrue.gateway.rpc.IActivityBooth",
             //              "methodId": "sayHi",
             //              "methodName": "探活方法",
             //              "parameterType": "java.lang.String",
@@ -262,10 +262,10 @@ public class GatewayConfigManage {
             //            {
             //              "auth": 0,
             //              "httpCommandType": "POST",
-            //              "interfaceId": "cn.bugstack.gateway.rpc.IActivityBooth",
+            //              "interfaceId": "com.ytrue.gateway.rpc.IActivityBooth",
             //              "methodId": "test",
             //              "methodName": "测试方法",
-            //              "parameterType": "java.lang.String,cn.bugstack.gateway.rpc.dto.XReq",
+            //              "parameterType": "java.lang.String,com.ytrue.gateway.rpc.dto.XReq",
             //              "systemId": "api-gateway-test-provider",
             //              "uri": "/wg/activity/test"
             //            }
