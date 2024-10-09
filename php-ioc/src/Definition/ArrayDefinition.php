@@ -2,6 +2,7 @@
 
 namespace Ioc\Definition;
 
+use Override;
 use const PHP_EOL;
 
 /**
@@ -48,7 +49,7 @@ class ArrayDefinition implements Definition
      *
      * @return string 返回定义的名称
      */
-    public function getName(): string
+    #[Override] public function getName(): string
     {
         return $this->name;
     }
@@ -58,7 +59,7 @@ class ArrayDefinition implements Definition
      *
      * @param string $name 定义的名称
      */
-    public function setName(string $name): void
+    #[Override] public function setName(string $name): void
     {
         $this->name = $name;
     }
@@ -69,7 +70,7 @@ class ArrayDefinition implements Definition
      *
      * @param callable $replacer 用于替换嵌套定义的回调函数
      */
-    public function replaceNestedDefinitions(callable $replacer): void
+    #[Override] public function replaceNestedDefinitions(callable $replacer): void
     {
         // 使用 array_map 函数对数组中的每个元素应用 $replacer 函数
         $this->values = array_map($replacer, $this->values);
@@ -80,7 +81,7 @@ class ArrayDefinition implements Definition
      *
      * @return string 返回定义的字符串表示，包含值数组的格式化输出
      */
-    public function __toString(): string
+    #[Override] public function __toString(): string
     {
         // 开始格式化数组为字符串
         $str = '[' . PHP_EOL;

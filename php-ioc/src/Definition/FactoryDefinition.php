@@ -3,6 +3,8 @@
 
 namespace Ioc\Definition;
 
+use Override;
+
 /**
  * 工厂定义类
  *
@@ -21,6 +23,14 @@ class FactoryDefinition implements Definition
     /**
      * 构造函数
      *
+     * callable 是一种泛型类型，可以代表任何可以被调用的内容。它可以是以下几种形式：
+     *
+     * 匿名函数（Closure）
+     * 函数名字符串：例如 'functionName'
+     * 对象方法数组：例如 [$object, 'methodName']
+     * 静态类方法数组：例如 ['ClassName', 'staticMethodName']
+     * 魔术方法 __invoke 的类实例：例如，任何实现了 __invoke() 方法的类实例。
+     *
      * @param string $name 工厂名称
      * @param callable|array|string $factory 工厂回调函数、数组或字符串
      * @param array $parameters 传递给工厂的参数
@@ -37,7 +47,7 @@ class FactoryDefinition implements Definition
      *
      * @return string 工厂名称
      */
-    public function getName(): string
+    #[Override] public function getName(): string
     {
         return $this->name;
     }
@@ -47,7 +57,7 @@ class FactoryDefinition implements Definition
      *
      * @param string $name 要设置的工厂名称
      */
-    public function setName(string $name): void
+    #[Override] public function setName(string $name): void
     {
         $this->name = $name;
     }
@@ -57,7 +67,7 @@ class FactoryDefinition implements Definition
      *
      * @return callable|array|string 返回工厂回调函数、数组或字符串
      */
-    public function getFactory(): callable|array|string
+    public function getCallable(): callable|array|string
     {
         return $this->factory;
     }
@@ -79,7 +89,7 @@ class FactoryDefinition implements Definition
      *
      * @param callable $replacer 替换回调函数
      */
-    public function replaceNestedDefinitions(callable $replacer): void
+    #[Override] public function replaceNestedDefinitions(callable $replacer): void
     {
         // 使用替换回调函数替换参数
         $this->parameters = array_map($replacer, $this->parameters);
@@ -90,7 +100,7 @@ class FactoryDefinition implements Definition
      *
      * @return string 返回 'Factory' 字符串，表示该定义的类型
      */
-    public function __toString(): string
+    #[Override] public function __toString(): string
     {
         return 'Factory';
     }

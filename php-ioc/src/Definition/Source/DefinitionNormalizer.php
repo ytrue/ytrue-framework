@@ -20,7 +20,7 @@ use ReflectionException;
  * 此类负责将不同类型的定义归一化为统一的 Definition 对象，
  * 支持数组、闭包和其他定义类型的转换，确保在 DI 容器中使用一致的定义格式。
  */
-class DefinitionNormalizer
+readonly class DefinitionNormalizer
 {
     /**
      * 构造函数。

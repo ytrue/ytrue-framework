@@ -5,6 +5,7 @@ namespace Ioc\Definition\Source;
 
 use Ioc\Definition\Definition;
 use Ioc\Definition\ExtendsPreviousDefinition;
+use Override;
 
 /**
  * SourceChain 类用于管理多个定义源的链。它允许通过链条依次搜索依赖定义，并支持扩展之前的定义。
@@ -34,15 +35,19 @@ class SourceChain implements DefinitionSource, MutableDefinitionSource
      * @param int $startIndex 从定义源链的哪个索引开始查找，默认为 0。
      * @return Definition|null 如果找到定义则返回，否则返回 null。
      */
-    public function getDefinition(string $name, int $startIndex = 0): null|Definition
+    #[Override] public function getDefinition(string $name, int $startIndex = 0): null|Definition
     {
+        // 默认这里会有两个  [DefinitionArray,ReflectionBasedAutowiring]
         $count = count($this->sources);
+
         for ($i = $startIndex; $i < $count; ++$i) {
+            /** @var DefinitionSource $source */
             $source = $this->sources[$i];
 
             // 从当前源中获取定义
             $definition = $source->getDefinition($name);
 
+            // 一般不会走这个
             if ($definition) {
                 // 如果定义是扩展的定义，解析它
                 if ($definition instanceof ExtendsPreviousDefinition) {
@@ -53,6 +58,7 @@ class SourceChain implements DefinitionSource, MutableDefinitionSource
             }
         }
 
+
         return null;
     }
 
@@ -61,7 +67,7 @@ class SourceChain implements DefinitionSource, MutableDefinitionSource
      *
      * @return array 所有定义的数组，键为定义名称，值为定义。
      */
-    public function getDefinitions(): array
+    #[Override]   public function getDefinitions(): array
     {
         // 合并所有源的定义
         $allDefinitions = array_merge(...array_map(fn($source) => $source->getDefinitions(), $this->sources));
@@ -83,7 +89,7 @@ class SourceChain implements DefinitionSource, MutableDefinitionSource
      * @param Definition $definition 要添加的定义。
      * @throws \LogicException 如果没有初始化可变定义源。
      */
-    public function addDefinition(Definition $definition): void
+    #[Override] public function addDefinition(Definition $definition): void
     {
         if (!$this->mutableSource) {
             throw new \LogicException("容器的定义源未正确初始化");

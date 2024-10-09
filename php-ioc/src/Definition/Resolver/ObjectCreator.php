@@ -121,14 +121,15 @@ readonly class ObjectCreator implements DefinitionResolver
                 $classReflection->getConstructor(),
                 $parameters
             );
-
-
-
             // 使用解析后的参数创建类的实例
+
+
             $object = new $classname(...$args);
 
             // 注入属性和方法
             $this->injectMethodsAndProperties($object, $definition);
+
+
         } catch (NotFoundExceptionInterface $e) {
             throw new DependencyException(sprintf(
                 'Error while injecting dependencies into %s: %s',

@@ -53,6 +53,7 @@ class ResolverDispatcher implements DefinitionResolver
             return $definition->resolve($this->container);
         }
 
+
         // 获取适当的定义解析器
         $definitionResolver = $this->getDefinitionResolver($definition);
 

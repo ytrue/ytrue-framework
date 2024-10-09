@@ -2,6 +2,7 @@
 
 namespace Ioc\Definition;
 
+use Override;
 use Psr\Container\ContainerInterface;
 
 /**
@@ -20,7 +21,7 @@ class ValueDefinition implements Definition, SelfResolvingDefinition
      * @param mixed $value 需要存储的值
      */
     public function __construct(
-        private mixed $value, // 存储的值，支持任意类型
+        private readonly mixed $value, // 存储的值，支持任意类型
     )
     {
     }
@@ -30,7 +31,7 @@ class ValueDefinition implements Definition, SelfResolvingDefinition
      *
      * @return string 返回定义的名称
      */
-    public function getName(): string
+    #[Override] public function getName(): string
     {
         return $this->name; // 返回当前名称
     }
@@ -40,7 +41,7 @@ class ValueDefinition implements Definition, SelfResolvingDefinition
      *
      * @param string $name 新的名称
      */
-    public function setName(string $name): void
+    #[Override] public function setName(string $name): void
     {
         $this->name = $name; // 设置名称
     }
@@ -61,7 +62,7 @@ class ValueDefinition implements Definition, SelfResolvingDefinition
      * @param ContainerInterface $container 容器实例
      * @return mixed 返回存储的值
      */
-    public function resolve(ContainerInterface $container): mixed
+    #[Override] public function resolve(ContainerInterface $container): mixed
     {
         return $this->getValue(); // 直接返回存储的值
     }
@@ -72,7 +73,7 @@ class ValueDefinition implements Definition, SelfResolvingDefinition
      * @param ContainerInterface $container 容器实例
      * @return bool 始终返回 true，因为 ValueDefinition 总是可以解析
      */
-    public function isResolvable(ContainerInterface $container): bool
+    #[Override] public function isResolvable(ContainerInterface $container): bool
     {
         return true; // 该定义始终可解析
     }
@@ -82,7 +83,7 @@ class ValueDefinition implements Definition, SelfResolvingDefinition
      *
      * @param callable $replacer 替换器，未使用
      */
-    public function replaceNestedDefinitions(callable $replacer): void
+    #[Override] public function replaceNestedDefinitions(callable $replacer): void
     {
         // 此方法未实现具体逻辑，因为 ValueDefinition 只包含简单值
     }
@@ -92,7 +93,7 @@ class ValueDefinition implements Definition, SelfResolvingDefinition
      *
      * @return string 返回格式化的字符串表示
      */
-    public function __toString(): string
+    #[Override] public function __toString(): string
     {
         return sprintf('Value (%s)', var_export($this->value, true)); // 返回值的字符串表示
     }

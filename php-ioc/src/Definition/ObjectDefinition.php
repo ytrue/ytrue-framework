@@ -6,6 +6,7 @@ use Ioc\Definition\Dumper\ObjectDefinitionDumper;
 use Ioc\Definition\ObjectDefinition\MethodInjection;
 use Ioc\Definition\ObjectDefinition\PropertyInjection;
 use Ioc\Definition\Source\DefinitionArray;
+use Override;
 use ReflectionClass;
 use ReflectionException;
 
@@ -78,7 +79,7 @@ class ObjectDefinition implements Definition
      *
      * @return string 返回名称
      */
-    public function getName(): string
+    #[Override] public function getName(): string
     {
         return $this->name;
     }
@@ -88,7 +89,7 @@ class ObjectDefinition implements Definition
      *
      * @param string $name 新的名称
      */
-    public function setName(string $name): void
+    #[Override] public function setName(string $name): void
     {
         $this->name = $name;
     }
@@ -284,7 +285,7 @@ class ObjectDefinition implements Definition
      *
      * @param callable $replacer 替换回调函数，该函数接受一个定义对象并返回替换后的定义对象
      */
-    public function replaceNestedDefinitions(callable $replacer): void
+    #[Override] public function replaceNestedDefinitions(callable $replacer): void
     {
         // 遍历属性注入数组，并对每个属性注入调用替换函数
         array_walk($this->propertyInjections, function (PropertyInjection $propertyInjection) use ($replacer) {
@@ -337,7 +338,7 @@ class ObjectDefinition implements Definition
      * @return string 定义的字符串表示
      * @throws ReflectionException
      */
-    public function __toString(): string
+    #[Override] public function __toString(): string
     {
         return (new ObjectDefinitionDumper())->dump($this);
     }

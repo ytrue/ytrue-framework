@@ -2,6 +2,8 @@
 
 namespace Ioc\Definition;
 
+use Override;
+
 /**
  * 装饰器定义类。
  *
@@ -23,7 +25,7 @@ class DecoratorDefinition extends FactoryDefinition implements Definition, Exten
      *
      * @param Definition $definition 要被装饰的定义。
      */
-    public function setExtendedDefinition(Definition $definition): void
+    #[Override] public function setExtendedDefinition(Definition $definition): void
     {
         $this->decorated = $definition;
     }
@@ -45,7 +47,7 @@ class DecoratorDefinition extends FactoryDefinition implements Definition, Exten
      *
      * @param callable $replacer 用于替换定义的回调函数。
      */
-    public function replaceNestedDefinitions(callable $replacer): void
+    #[Override] public function replaceNestedDefinitions(callable $replacer): void
     {
         // 无嵌套定义
     }

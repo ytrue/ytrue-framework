@@ -5,6 +5,7 @@ namespace Ioc\Definition\Helper;
 use Ioc\Definition\DecoratorDefinition;
 use Ioc\Definition\Definition;
 use Ioc\Definition\FactoryDefinition;
+use Override;
 
 /**
  * 工厂定义助手类。
@@ -52,7 +53,7 @@ class FactoryDefinitionHelper implements DefinitionHelper
      * @param string $entryName 入口名称。
      * @return Definition 返回对应的定义，可以是工厂定义或装饰器定义。
      */
-    public function getDefinition(string $entryName): Definition
+    #[Override] public function getDefinition(string $entryName): Definition
     {
         if ($this->decorate) {
             return new DecoratorDefinition($entryName, $this->factory, $this->parameters);
@@ -69,11 +70,11 @@ class FactoryDefinitionHelper implements DefinitionHelper
      * 可以多次调用此方法以覆盖单个值。
      *
      * @param string $parameter 参数的名称或索引。
-     * @param mixed  $value     要为该参数提供的值。
+     * @param mixed $value 要为该参数提供的值。
      *
      * @return $this 返回当前实例，以便链式调用。
      */
-    public function parameter(string $parameter, mixed $value) : self
+    public function parameter(string $parameter, mixed $value): self
     {
         $this->parameters[$parameter] = $value;
 

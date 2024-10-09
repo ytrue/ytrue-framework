@@ -2,6 +2,7 @@
 
 namespace Ioc\Definition;
 
+use Override;
 use const PHP_EOL;
 
 /**
@@ -22,9 +23,9 @@ class EnvironmentVariableDefinition implements Definition
      * @param mixed $defaultValue 默认值，如果变量不是必需的
      */
     public function __construct(
-        private string $variableName,
-        private bool   $isOptional = false,
-        private mixed  $defaultValue = null,
+        private readonly string $variableName,
+        private readonly bool   $isOptional = false,
+        private mixed           $defaultValue = null,
     )
     {
     }
@@ -64,7 +65,7 @@ class EnvironmentVariableDefinition implements Definition
      *
      * @return string 定义的名称
      */
-    public function getName(): string
+    #[Override] public function getName(): string
     {
         return $this->name;
     }
@@ -74,7 +75,7 @@ class EnvironmentVariableDefinition implements Definition
      *
      * @param string $name 要设置的名称
      */
-    public function setName(string $name): void
+    #[Override] public function setName(string $name): void
     {
         $this->name = $name;
     }
@@ -86,7 +87,7 @@ class EnvironmentVariableDefinition implements Definition
      *
      * @param callable $replacer 替换回调函数
      */
-    public function replaceNestedDefinitions(callable $replacer): void
+    #[Override] public function replaceNestedDefinitions(callable $replacer): void
     {
         // 使用替换回调函数替换默认值
         $this->defaultValue = $replacer($this->defaultValue);
@@ -97,7 +98,7 @@ class EnvironmentVariableDefinition implements Definition
      *
      * @return string 以字符串形式返回环境变量定义
      */
-    public function __toString(): string
+    #[Override] public function __toString(): string
     {
         $str = '    variable = ' . $this->variableName . PHP_EOL
             . '    optional = ' . ($this->isOptional ? 'yes' : 'no');

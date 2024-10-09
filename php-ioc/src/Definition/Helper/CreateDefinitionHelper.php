@@ -6,6 +6,7 @@ use Ioc\Definition\Exception\InvalidDefinition;
 use Ioc\Definition\ObjectDefinition;
 use Ioc\Definition\ObjectDefinition\MethodInjection;
 use Ioc\Definition\ObjectDefinition\PropertyInjection;
+use Override;
 use ReflectionParameter;
 
 /**
@@ -147,7 +148,7 @@ class CreateDefinitionHelper implements DefinitionHelper
      *
      * @throws InvalidDefinition
      */
-    public function getDefinition(string $entryName): ObjectDefinition
+    #[Override] public function getDefinition(string $entryName): ObjectDefinition
     {
         // 获取定义类名常量
         $class = $this::DEFINITION_CLASS;

@@ -6,6 +6,7 @@ use Ioc\Definition\Definition;
 use Ioc\Definition\ObjectDefinition;
 use Ioc\Definition\ObjectDefinition\MethodInjection;
 use Ioc\Definition\Reference;
+use Override;
 use ReflectionClass;
 use ReflectionException;
 use ReflectionFunctionAbstract;
@@ -27,7 +28,7 @@ class ReflectionBasedAutowiring implements DefinitionSource, Autowiring
      * @return ObjectDefinition|null 返回填充了构造函数注入的对象定义，或者如果类或接口不存在，则返回 null。
      * @throws ReflectionException 如果反射过程中出现异常。
      */
-    public function autowire(string $name, ?ObjectDefinition $definition = null): ObjectDefinition|null
+    #[Override] public function autowire(string $name, ?ObjectDefinition $definition = null): ObjectDefinition|null
     {
         // 如果提供了对象定义，则获取类名，否则使用名称作为类名
         $className = $definition ? $definition->getClassName() : $name;
@@ -105,7 +106,7 @@ class ReflectionBasedAutowiring implements DefinitionSource, Autowiring
      * @return Definition|null 返回对应的定义，或者如果没有找到，则返回 null。
      * @throws ReflectionException 如果反射过程中出现异常。
      */
-    public function getDefinition(string $name): ?Definition
+    #[Override] public function getDefinition(string $name): ?Definition
     {
         return $this->autowire($name); // 调用 autowire 方法获取定义
     }
@@ -115,7 +116,7 @@ class ReflectionBasedAutowiring implements DefinitionSource, Autowiring
      *
      * @return array 返回一个空数组，因为当前实现不提供定义列表。
      */
-    public function getDefinitions(): array
+    #[Override] public function getDefinitions(): array
     {
         return []; // 返回空数组
     }

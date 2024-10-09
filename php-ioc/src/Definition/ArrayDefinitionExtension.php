@@ -3,6 +3,7 @@
 namespace Ioc\Definition;
 
 use Ioc\Definition\Exception\InvalidDefinition;
+use Override;
 
 /**
  * ArrayDefinitionExtension 类继承自 ArrayDefinition，并实现了 ExtendsPreviousDefinition 接口
@@ -22,7 +23,7 @@ class ArrayDefinitionExtension extends ArrayDefinition implements ExtendsPreviou
      *
      * @return array 返回合并后的值数组
      */
-    public function getValues(): array
+    #[Override] public function getValues(): array
     {
         // 如果没有扩展的定义，直接返回父类的值数组
         if (!$this->subDefinition) {
@@ -40,7 +41,7 @@ class ArrayDefinitionExtension extends ArrayDefinition implements ExtendsPreviou
      *
      * @throws InvalidDefinition 如果传入的定义不是 ArrayDefinition，则抛出异常
      */
-    public function setExtendedDefinition(Definition $definition): void
+    #[Override] public function setExtendedDefinition(Definition $definition): void
     {
         // 检查传入的定义是否是 ArrayDefinition 类型
         if (!$definition instanceof ArrayDefinition) {

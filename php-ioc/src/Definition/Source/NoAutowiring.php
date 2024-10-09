@@ -4,6 +4,7 @@ namespace Ioc\Definition\Source;
 
 use Ioc\Definition\Exception\InvalidDefinition;
 use Ioc\Definition\ObjectDefinition;
+use Override;
 
 /**
  * Class NoAutowiring
@@ -15,7 +16,7 @@ class NoAutowiring implements Autowiring
     /**
      * @throws InvalidDefinition
      */
-    public function autowire(string $name, ?ObjectDefinition $definition = null): ObjectDefinition|null
+    #[Override] public function autowire(string $name, ?ObjectDefinition $definition = null): ObjectDefinition|null
     {
         throw new InvalidDefinition(sprintf(
             'Cannot autowire entry "%s" because autowiring is disabled',

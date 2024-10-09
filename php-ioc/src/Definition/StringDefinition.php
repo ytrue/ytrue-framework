@@ -3,6 +3,7 @@
 namespace Ioc\Definition;
 
 use Ioc\DependencyException;
+use Override;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -20,7 +21,7 @@ class StringDefinition implements Definition, SelfResolvingDefinition
     /**
      * @param string $expression 表达式，可能包含占位符
      */
-    public function __construct(private string $expression)
+    public function __construct(private readonly string $expression)
     {
     }
 
@@ -29,7 +30,7 @@ class StringDefinition implements Definition, SelfResolvingDefinition
      *
      * @return string 返回定义名称
      */
-    public function getName(): string
+    #[Override] public function getName(): string
     {
         return $this->name;
     }
@@ -39,7 +40,7 @@ class StringDefinition implements Definition, SelfResolvingDefinition
      *
      * @param string $name 定义名称
      */
-    public function setName(string $name): void
+    #[Override] public function setName(string $name): void
     {
         $this->name = $name;
     }
@@ -61,7 +62,7 @@ class StringDefinition implements Definition, SelfResolvingDefinition
      *
      * @param callable $replacer 用于替换嵌套定义的回调函数
      */
-    public function replaceNestedDefinitions(callable $replacer): void
+    #[Override] public function replaceNestedDefinitions(callable $replacer): void
     {
     }
 
@@ -70,7 +71,7 @@ class StringDefinition implements Definition, SelfResolvingDefinition
      *
      * @return string 返回字符串表达式
      */
-    public function __toString(): string
+    #[Override] public function __toString(): string
     {
         return $this->expression;
     }
@@ -79,12 +80,12 @@ class StringDefinition implements Definition, SelfResolvingDefinition
      * 解析当前字符串表达式
      *
      * @param ContainerInterface $container 容器实例
-     * @return mixed 返回解析后的表达式结果
+     * @return string 返回解析后的表达式结果
      *
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
-    public function resolve(ContainerInterface $container): mixed
+    #[Override] public function resolve(ContainerInterface $container): string
     {
         return self::resolveExpression($this->name, $this->expression, $container);
     }
@@ -95,7 +96,7 @@ class StringDefinition implements Definition, SelfResolvingDefinition
      * @param ContainerInterface $container 容器实例
      * @return bool 返回 true，表示该定义始终可解析
      */
-    public function isResolvable(ContainerInterface $container): bool
+    #[Override] public function isResolvable(ContainerInterface $container): bool
     {
         return true;
     }

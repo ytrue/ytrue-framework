@@ -26,7 +26,7 @@ readonly class ParameterResolver
      *
      * @param MethodInjection|null $definition 方法注入定义，可选，表示该方法的依赖定义
      * @param ReflectionMethod|null $method 方法的反射对象，可选，表示需要解析的目标方法
-     * @param array $parameters 传入的参数数组，关联数组，包含参数名和对应的值
+     * @param array $parameters 传入的参数数组，关联数组，包含参数名和对应的值  ['name'=>'test','age'=>13]
      *
      * @return array 解析后的参数数组
      *
@@ -49,6 +49,7 @@ readonly class ParameterResolver
         // 获取方法定义的参数列表
         $definitionParameters = $definition ? $definition->getParameters() : [];
 
+
         // 遍历方法的所有参数
         foreach ($method->getParameters() as $index => $parameter) {
             // 检查参数名是否存在于传入的参数数组中
@@ -64,7 +65,6 @@ readonly class ParameterResolver
                     $args[] = $this->getParameterDefaultValue($parameter, $method);
                     continue;
                 }
-
                 // 如果没有找到值，抛出异常
                 throw new InvalidDefinition(sprintf(
                     'Parameter $%s of %s has no value defined or guessable',
@@ -72,6 +72,7 @@ readonly class ParameterResolver
                     $this->getFunctionName($method)
                 ));
             }
+
 
             // 处理嵌套定义
             if ($value instanceof Definition) {
@@ -84,10 +85,10 @@ readonly class ParameterResolver
                 }
             }
 
+
             // 将解析后的值添加到参数数组中
             $args[] = &$value;
         }
-
         return $args;
     }
 

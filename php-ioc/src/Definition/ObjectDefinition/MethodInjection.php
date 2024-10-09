@@ -3,6 +3,7 @@
 namespace Ioc\Definition\ObjectDefinition;
 
 use Ioc\Definition\Definition;
+use Override;
 
 /**
  * Class MethodInjection
@@ -91,7 +92,7 @@ class MethodInjection implements Definition
      *
      * @return string 返回空字符串。
      */
-    public function getName(): string
+    #[Override] public function getName(): string
     {
         return '';
     }
@@ -101,7 +102,7 @@ class MethodInjection implements Definition
      *
      * @param string $name 要设置的名称。
      */
-    public function setName(string $name): void
+    #[Override] public function setName(string $name): void
     {
         // 当前实现不做任何处理
     }
@@ -111,7 +112,7 @@ class MethodInjection implements Definition
      *
      * @param callable $replacer 用于替换参数的回调函数。
      */
-    public function replaceNestedDefinitions(callable $replacer): void
+    #[Override] public function replaceNestedDefinitions(callable $replacer): void
     {
         $this->parameters = array_map($replacer, $this->parameters);
     }
@@ -121,7 +122,7 @@ class MethodInjection implements Definition
      *
      * @return string 返回方法注入的字符串表示。
      */
-    public function __toString(): string
+    #[Override] public function __toString(): string
     {
         return sprintf('method(%s)', $this->methodName);
     }

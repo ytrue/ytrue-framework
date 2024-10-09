@@ -6,6 +6,7 @@ use Ioc\Definition\AutowireDefinition;
 use Ioc\Definition\Definition;
 use Ioc\Definition\ObjectDefinition;
 use LogicException;
+use Override;
 
 /**
  * SourceCache 类用于在获取依赖注入定义时提供缓存功能。
@@ -13,7 +14,7 @@ use LogicException;
  */
 class SourceCache implements DefinitionSource, MutableDefinitionSource
 {
-    public const CACHE_KEY = 'php-di.definitions.'; // 缓存键前缀
+    public const string CACHE_KEY = 'php-di.definitions.'; // 缓存键前缀
 
     /**
      * 构造函数
@@ -22,8 +23,8 @@ class SourceCache implements DefinitionSource, MutableDefinitionSource
      * @param string $cacheNamespace 缓存命名空间，用于区分不同上下文的缓存。
      */
     public function __construct(
-        private DefinitionSource $cachedSource,
-        private string           $cacheNamespace = '',
+        private readonly DefinitionSource $cachedSource,
+        private readonly string           $cacheNamespace = '',
     )
     {
     }
@@ -34,7 +35,7 @@ class SourceCache implements DefinitionSource, MutableDefinitionSource
      * @param string $name 定义的名称。
      * @return Definition|null 如果找到定义则返回，否则返回 null。
      */
-    public function getDefinition(string $name): Definition|null
+    #[Override] public function getDefinition(string $name): Definition|null
     {
         // 从缓存中获取定义
         $definition = apcu_fetch($this->getCacheKey($name));
@@ -97,7 +98,7 @@ class SourceCache implements DefinitionSource, MutableDefinitionSource
      *
      * @return array 定义数组。
      */
-    public function getDefinitions(): array
+    #[Override] public function getDefinitions(): array
     {
         return $this->cachedSource->getDefinitions();
     }
@@ -107,7 +108,7 @@ class SourceCache implements DefinitionSource, MutableDefinitionSource
      *
      * @throws LogicException 当试图在启用缓存时添加定义时抛出异常。
      */
-    public function addDefinition(Definition $definition): void
+    #[Override] public function addDefinition(Definition $definition): void
     {
         // 禁止在运行时添加定义，因为这可能导致缓存不一致
         throw new LogicException('无法在启用缓存的容器中运行时设置定义。这样做可能会缓存定义，导致下次执行时结果不同。可以将定义放入文件中，移除缓存，或直接设置原始值（PHP 对象、字符串、整数等）。');

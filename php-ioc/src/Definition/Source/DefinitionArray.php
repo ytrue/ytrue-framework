@@ -5,6 +5,7 @@ namespace Ioc\Definition\Source;
 use Exception;
 use Ioc\Definition\Definition;
 use Ioc\Definition\Exception\InvalidDefinition;
+use Override;
 use ReflectionException;
 
 /**
@@ -12,12 +13,12 @@ use ReflectionException;
  */
 class DefinitionArray implements DefinitionSource, MutableDefinitionSource
 {
-    public const WILDCARD = '*'; // 通配符常量
+    public const string WILDCARD = '*'; // 通配符常量
 
     /**
      * 匹配任何除了 "\" 的字符
      */
-    private const WILDCARD_PATTERN = '([^\\\\]+)';
+    private const string WILDCARD_PATTERN = '([^\\\\]+)';
 
     private array $definitions; // 保存定义的数组
 
@@ -68,7 +69,7 @@ class DefinitionArray implements DefinitionSource, MutableDefinitionSource
      *
      * @param Definition $definition 要添加的定义
      */
-    public function addDefinition(Definition $definition): void
+    #[Override] public function addDefinition(Definition $definition): void
     {
         // 根据定义名称将定义存储在数组中
         $this->definitions[$definition->getName()] = $definition;
@@ -84,7 +85,7 @@ class DefinitionArray implements DefinitionSource, MutableDefinitionSource
      * @throws InvalidDefinition
      * @throws ReflectionException
      */
-    public function getDefinition(string $name): ?Definition
+    #[Override] public function getDefinition(string $name): ?Definition
     {
         // 如果定义存在，直接返回
         if (array_key_exists($name, $this->definitions)) {
@@ -126,7 +127,7 @@ class DefinitionArray implements DefinitionSource, MutableDefinitionSource
      *
      * @return array 返回不包含通配符的所有定义
      */
-    public function getDefinitions(): array
+    #[Override] public function getDefinitions(): array
     {
         $definitions = [];
 

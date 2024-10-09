@@ -3,13 +3,15 @@
 
 namespace Ioc\Definition;
 
+use Override;
+
 /**
  * 实例定义类
  *
  * 该类用于表示一个实例的定义，包括实例对象和与该实例相关的对象定义。
  * 它实现了 Definition 接口，并提供了相应的 getter 和 setter 方法。
  */
-class InstanceDefinition implements Definition
+readonly class InstanceDefinition implements Definition
 {
     /**
      * 构造函数
@@ -29,7 +31,7 @@ class InstanceDefinition implements Definition
      *
      * @return string 返回空字符串，因为此定义不具名
      */
-    public function getName(): string
+    #[Override] public function getName(): string
     {
         return '';
     }
@@ -39,7 +41,7 @@ class InstanceDefinition implements Definition
      *
      * @param string $name 要设置的名称，但此定义不使用名称
      */
-    public function setName(string $name): void
+    #[Override] public function setName(string $name): void
     {
         // 此定义不需要设置名称，因此此方法为空
     }
@@ -71,7 +73,7 @@ class InstanceDefinition implements Definition
      *
      * @param callable $replacer 替换回调函数
      */
-    public function replaceNestedDefinitions(callable $replacer): void
+    #[Override] public function replaceNestedDefinitions(callable $replacer): void
     {
         // 使用替换回调函数替换对象定义中的嵌套定义
         $this->objectDefinition->replaceNestedDefinitions($replacer);
@@ -82,7 +84,7 @@ class InstanceDefinition implements Definition
      *
      * @return string 返回 'Instance' 字符串，表示该定义的类型
      */
-    public function __toString(): string
+    #[Override] public function __toString(): string
     {
         return 'Instance';
     }

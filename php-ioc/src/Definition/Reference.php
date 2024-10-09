@@ -2,6 +2,7 @@
 
 namespace Ioc\Definition;
 
+use Override;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -12,7 +13,7 @@ use Psr\Container\NotFoundExceptionInterface;
  * 该类用于表示对其他定义的引用，包括目标条目的名称和解析该条目的方法。
  * 它实现了 Definition 接口，并提供了相应的 getter 和 setter 方法。
  */
-class Reference implements Definition
+class Reference implements Definition, SelfResolvingDefinition
 {
     private string $name = '';
 
@@ -22,7 +23,7 @@ class Reference implements Definition
      * @param string $targetEntryName 目标条目的名称
      */
     public function __construct(
-        private string $targetEntryName,
+        private readonly string $targetEntryName,
     )
     {
     }
@@ -32,7 +33,7 @@ class Reference implements Definition
      *
      * @return string 返回引用的名称
      */
-    public function getName(): string
+    #[Override] public function getName(): string
     {
         return $this->name;
     }
@@ -42,7 +43,7 @@ class Reference implements Definition
      *
      * @param string $name 要设置的名称
      */
-    public function setName(string $name): void
+    #[Override] public function setName(string $name): void
     {
         $this->name = $name;
     }
@@ -65,7 +66,7 @@ class Reference implements Definition
      * @throws NotFoundExceptionInterface 如果目标条目未找到
      * @throws ContainerExceptionInterface 如果容器发生错误
      */
-    public function resolve(ContainerInterface $container): mixed
+    #[Override] public function resolve(ContainerInterface $container): mixed
     {
         return $container->get($this->getTargetEntryName());
     }
@@ -76,7 +77,7 @@ class Reference implements Definition
      * @param ContainerInterface $container 容器实例
      * @return bool 如果目标条目存在，则返回 true；否则返回 false
      */
-    public function isResolvable(ContainerInterface $container): bool
+    #[Override] public function isResolvable(ContainerInterface $container): bool
     {
         return $container->has($this->getTargetEntryName());
     }
@@ -88,7 +89,7 @@ class Reference implements Definition
      *
      * @param callable $replacer 替换回调函数
      */
-    public function replaceNestedDefinitions(callable $replacer): void
+    #[Override] public function replaceNestedDefinitions(callable $replacer): void
     {
         // 当前未实现任何替换逻辑
     }
@@ -98,7 +99,7 @@ class Reference implements Definition
      *
      * @return string 返回格式化的字符串，表示该引用的目标条目名称
      */
-    public function __toString(): string
+    #[Override] public function __toString(): string
     {
         return sprintf(
             'get(%s)',
