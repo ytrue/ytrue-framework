@@ -2,6 +2,7 @@
 
 namespace Ioc\Proxy;
 
+use Closure;
 use ProxyManager\Configuration;
 use ProxyManager\Factory\LazyLoadingValueHolderFactory;
 use ProxyManager\FileLocator\FileLocator;
@@ -38,10 +39,10 @@ class ProxyFactory
      * 创建指定类的懒加载代理实例，并传递初始化闭包。
      *
      * @param string $className 要生成代理类的类名
-     * @param \Closure $initializer 初始化闭包，当代理对象首次被调用时执行
+     * @param Closure $initializer 初始化闭包，当代理对象首次被调用时执行
      * @return LazyLoadingInterface 返回代理类实例
      */
-    public function createProxy(string $className, \Closure $initializer): LazyLoadingInterface
+    public function createProxy(string $className, Closure $initializer): LazyLoadingInterface
     {
         // 调用 proxyManager() 方法获取 LazyLoadingValueHolderFactory，并创建代理类
         return $this->proxyManager()->createProxy($className, $initializer);

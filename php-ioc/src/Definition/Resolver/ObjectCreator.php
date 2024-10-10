@@ -3,7 +3,6 @@
 namespace Ioc\Definition\Resolver;
 
 use Exception;
-use RuntimeException;
 use Ioc\Definition\Definition;
 use Ioc\Definition\Exception\InvalidDefinition;
 use Ioc\Definition\ObjectDefinition;
@@ -11,6 +10,7 @@ use Ioc\Definition\ObjectDefinition\PropertyInjection;
 use Ioc\DependencyException;
 use Ioc\Proxy\ProxyFactory;
 use Override;
+use ProxyManager\Proxy\LazyLoadingInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
 use ReflectionException;
@@ -57,8 +57,7 @@ readonly class ObjectCreator implements DefinitionResolver
     {
         // 如果定义是懒加载的，则创建代理对象
         if ($definition->isLazy()) {
-            throw new RuntimeException("暂未实现....");
-            //  return $this->createProxy($definition, $parameters);
+            return $this->createProxy($definition, $parameters);
         }
 
         // 否则创建普通的对象实例
@@ -231,5 +230,19 @@ readonly class ObjectCreator implements DefinitionResolver
         }
         // 设置属性值
         $property->setValue($object, $propertyValue);
+    }
+
+    private function createProxy(ObjectDefinition $definition, array $parameters): LazyLoadingInterface
+    {
+        $className = $definition->getClassName();
+        return $this->proxyFactory->createProxy(
+            $className,
+            function (&$wrappedObject, $proxy, $method, $params, &$initializer) use ($definition, $parameters) {
+                $wrappedObject = $this->createInstance($definition, $parameters);
+                $initializer = null; // turning off further lazy initialization
+
+                return true;
+            }
+        );
     }
 }

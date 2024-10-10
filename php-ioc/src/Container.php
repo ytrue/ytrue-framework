@@ -425,7 +425,7 @@ class Container implements FactoryInterface, ContainerInterface, InvokerInterfac
      * @param string $name 定义名称
      * @param Definition $definition 定义对象
      */
-    private function setDefinition(string $name, Definition $definition): void
+    protected function setDefinition(string $name, Definition $definition): void
     {
         if (array_key_exists($name, $this->resolvedEntries)) {
             unset($this->resolvedEntries[$name]);

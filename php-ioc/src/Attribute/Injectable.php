@@ -12,7 +12,7 @@ use Attribute;
  * @api
  */
 #[Attribute(Attribute::TARGET_CLASS)]
-final class Injectable
+final readonly class Injectable
 {
     /**
      * 构造函数

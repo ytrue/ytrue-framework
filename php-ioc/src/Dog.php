@@ -40,16 +40,25 @@ class Dog
 
 
 
-
     /**
      * @param DogName $dogName
      * @param int $age
      */
-    public function __construct(DogName $dogName, int $age)
+    public function __construct(  int $age)
     {
-        $this->dogName = $dogName;
+
         $this->age = $age;
     }
+
+//    /**
+//     * @param DogName $dogName
+//     * @param int $age
+//     */
+//    public function __construct(DogName $dogName, int $age)
+//    {
+//        $this->dogName = $dogName;
+//        $this->age = $age;
+//    }
 
     public function getDogName(): DogName
     {

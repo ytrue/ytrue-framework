@@ -2,6 +2,16 @@
 
 
 namespace Ioc;
+
+use Ioc\Cache\CompiledContainerCache;
+use Ioc\Compiler\Compiler;
+use Ioc\Definition\Helper\CreateDefinitionHelper;
+use Ioc\Definition\Source\AttributeBasedAutowiring;
+use Ioc\Definition\Source\DefinitionArray;
+use Ioc\Definition\Source\ReflectionBasedAutowiring;
+use Ioc\Definition\Source\SourceChain;
+use Ioc\Proxy\ProxyFactory;
+
 include "../vendor/autoload.php";
 
 class Test
@@ -52,22 +62,75 @@ class Test
 //        $decoratorResolver = new FactoryResolver($container, $resolverDispatcher);
 //        $decoratorResolver->resolve($f);
 
-        $container = new Container;
-        $dog = $container->make(Dog::class,['dogName'=>$dogName1,'age'=>123]);
+//        $container = new Container;
+//        $dog = $container->make(Dog::class, ['dogName' => $dogName1, 'age' => 123]);
+//        $container->set(Dog::class, $dog);
+//
+//       print_r( $container->get(Dog::class));
 
-        $container->set(Dog::class,$dog);
-
-        print_r($container->debugEntry(Dog::class));
-
-        print_r($container->getKnownEntryNames());
+//        print_r($container->debugEntry(Dog::class));
+//
+//        print_r($container->getKnownEntryNames());
 
 
-
-
-     //   $make = $container->make(Dog::class, [$dogName, 123]);
+        //   $make = $container->make(Dog::class, [$dogName, 123]);
         //$make = $container->make(Dog::class, ['dogName' => $dogName, 'age' => 123]);
 
-       // print_r($make);
+        // print_r($make);
+
+
+//        $reflectionBasedAutowiring = new ReflectionBasedAutowiring;
+//        $attributeBasedAutowiring = new AttributeBasedAutowiring;
+//
+//        $definitionArray = new DefinitionArray([],$reflectionBasedAutowiring);
+//
+//        $sources[] = $reflectionBasedAutowiring;
+//        $sources[] = $attributeBasedAutowiring;
+//        $sources[] = $definitionArray;
+//
+//        $source = new SourceChain($sources);
+//        $source->setMutableDefinitionSource($definitionArray);
+//
+//        $compiler = new Compiler(new ProxyFactory());
+//        $test = $compiler->compile(
+//            $source,
+//            './Cache/',
+//            'SubContainer',
+//            'Container',
+//            false
+//        );
+
+        //unlink('./Cache/CompiledContainer.php');
+
+//        $containerBuilder = new ContainerBuilder();
+//        $containerBuilder->enableCompilation(
+//            directory: "./Cache",
+//            containerClass: "CompiledContainerCache"
+//        );
+//
+//        $createDefinitionHelper = new CreateDefinitionHelper();
+//        $createDefinitionHelper->constructor(123);
+//        $dogDef = $createDefinitionHelper->getDefinition(Dog::class);
+//        $dogDef->setClassName(Dog::class);
+//        $dogDef->setLazy(true);
+//
+//
+//        $definitionArray = new DefinitionArray([
+//            Dog::class=>$dogDef
+//        ]);
+//
+//
+//
+//
+//        $containerBuilder->addDefinitions($definitionArray);
+//
+//        $containerBuilder->useAttributes(true);
+//        $containerBuilder->useAutowiring(true);
+//        $container1 = $containerBuilder->build();
+
+        //$dog = $container1->make(Dog::class, ['dogName' => $dogName1, 'age' => 123]);
+
+
     }
 }
 
