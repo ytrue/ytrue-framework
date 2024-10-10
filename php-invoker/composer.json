@@ -1,0 +1,22 @@
+{
+  "name": "ytrue-invoker/ytrue-invoker",
+  "type": "library",
+  "autoload": {
+    "psr-4": {
+      "Invoker\\": "src/"
+    },
+    "files": [
+      "src/functions.php"
+    ]
+  },
+  "authors": [
+    {
+      "name": "ytrue",
+      "email": "ytrue@qq.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.3",
+    "psr/container": "^1.1 || ^2.0"
+  }
+}
