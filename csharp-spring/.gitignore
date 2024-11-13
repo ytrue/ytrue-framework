@@ -1,0 +1,92 @@
+#OS junk files
+[Tt]humbs.db
+*.DS_Store
+
+#Visual Studio files
+*.user
+*.aps
+*.pch
+*.vspscc
+*.vssscc
+*.suo
+*.bak
+*.log
+*.[Cc]ache
+[Oo]bj
+[Bb]in
+[Dd]ebug*/
+[Rr]elease*/
+
+#Tooling
+_ReSharper*/
+*.resharper
+*.sln.DotSettings
+[Tt]est[Rr]esult*
+.idea
+.vs
+
+#Project files
+[Bb]uild/
+s3-credentials.ps1
+TIBCO.EMS.*
+
+#Subversion files
+.svn
+
+# Office Temp Files
+~$*
+
+#Documentation output
+doc/reference/target/
+
+#Packaging Output
+packages/
+nuget-packages/
+
+#Build log and other log files
+buildlog.txt
+log.txt*
+
+# XMLmind temporary files
+*.xml~
+
+# web site model pre-compiled files
+PrecompiledWeb
+
+*.dotCover
+
+/src/Spring/Spring.Aop/Spring.Aop.xml
+/src/Spring/Spring.Core/Spring.Core.xml
+/src/Spring/Spring.Data.NHibernate3/Spring.Data.NHibernate3.xml
+/src/Spring/Spring.Data.NHibernate4/Spring.Data.NHibernate4.xml
+/src/Spring/Spring.Data.NHibernate5/Spring.Data.NHibernate5.xml
+/src/Spring/Spring.Messaging.Ems/Spring.Messaging.Ems.xml
+/src/Spring/Spring.Messaging.Nms/Spring.Messaging.Nms.xml
+/src/Spring/Spring.Messaging/Spring.Messaging.xml
+/src/Spring/Spring.Data/Spring.Data.xml
+/src/Spring/Spring.Web/Spring.Web.xml
+/src/Spring/Spring.Web.Conversation.NHibernate4/Spring.Web.Conversation.NHibernate4.xml
+/src/Spring/Spring.Web.Mvc/Spring.Web.Mvc.xml
+/src/Spring/Spring.Web.Mvc3/Spring.Web.Mvc3.xml
+/src/Spring/Spring.Web.Mvc4/Spring.Web.Mvc4.xml
+/src/Spring/Spring.Web.Mvc5/Spring.Web.Mvc5.xml
+/src/Spring/Spring.Testing.NUnit/Spring.Testing.NUnit.xml
+/src/Spring/Spring.Services/Spring.Services.xml
+/src/Spring/Spring.Web.Extensions/Spring.Web.Extensions.xml
+/src/Spring/Spring.Scheduling.Quartz2/Spring.Scheduling.Quartz2.xml
+/src/Spring/Spring.Template.Velocity.Castle/Spring.Template.Velocity.Castle.xml
+/src/Spring/Spring.Template.Velocity/Spring.Template.Velocity.xml
+/src/Spring/Spring.Testing.Microsoft/Spring.Testing.Microsoft.xml
+/src/Spring/Spring.Web.Conversation.NHibernate3/Spring.Web.Conversation.NHibernate3.xml
+
+/src/Spring/GenCommonAssemblyInfo.cs
+/.project
+/examples/Spring/Spring.Mvc3QuickStart/packages
+/examples/Spring/Spring.Mvc4QuickStart/packages
+
+project.lock.json
+
+BenchmarkDotNet.Artifacts*
+/artifacts
+/.nuke/temp
+node_modules
